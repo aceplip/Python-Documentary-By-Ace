@@ -229,6 +229,7 @@ main{padding:32px 24px 100px;max-width:1500px;position:relative;z-index:10}
 .s-applications .section-icon{background:rgba(0,200,200,.12)}.s-applications .section-header::after{background:#00cfff}
 .s-quiz .section-icon{background:rgba(168,100,255,.15)}.s-quiz .section-header::after{background:#a864ff}
 .s-avis .section-icon{background:rgba(255,215,0,.12)}.s-avis .section-header::after{background:var(--gold)}
+.s-admin-content .section-icon{background:rgba(255,60,90,.15)}.s-admin-content .section-header::after{background:var(--red)}
 
 /* ── LECON CARD ── */
 .lecons-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),1fr));gap:16px}
@@ -651,6 +652,29 @@ footer a:hover{color:var(--accent)}
 .public-profile-stat-num{font-family:'Orbitron',monospace;font-size:15px;color:var(--accent2)}
 .public-profile-stat-label{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
 
+/* Admin content editor */
+#admin-text-overlay{
+  position:fixed;inset:0;z-index:720;display:flex;align-items:center;justify-content:center;
+  background:rgba(2,5,16,.92);backdrop-filter:blur(10px)
+}
+#admin-text-overlay.hidden{display:none}
+.admin-text-box{
+  width:min(760px,96vw);max-height:88vh;overflow-y:auto;
+  background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:16px
+}
+.admin-text-title{font-family:'Orbitron',monospace;font-size:14px;color:white}
+.admin-text-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.admin-text-grid .full{grid-column:1/-1}
+.admin-text-input,.admin-text-area{
+  width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  padding:10px 12px;color:var(--text);font-family:'Space Mono',monospace;font-size:11px;outline:none
+}
+.admin-text-area{min-height:90px;resize:vertical;line-height:1.6}
+.admin-text-input:focus,.admin-text-area:focus{border-color:var(--accent2)}
+.admin-text-list{margin-top:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.admin-text-item{padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.admin-text-item:last-child{border-bottom:none}
+
 /* Top nav tab for profile */
 .main-nav-tab{
   position:fixed;top:8px;left:50%;transform:translateX(-50%);
@@ -925,6 +949,7 @@ function getLevelPct(xp){const l=getLevel(xp);return Math.min(100,Math.round((xp
 
 /* ══ STATE ══ */
 let currentUser=null, userProfile=null, authMode='login', avisData=[], avisRating=0;
+let adminTextsData=[],adminTextEditId=null;
 
 /* ══════════════════════════════════
    PAGE NAVIGATION
@@ -1667,6 +1692,7 @@ function showToast(msg,type=''){
 
 /* ══ HIGHLIGHT ══ */
 function hl(text,q){if(!q)return text;return text.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),'<mark>$1</mark>');}
+function escapeHTML(v){return String(v??'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
 
 /* ══ RENDER ══ */
 let currentFilter='all',currentQuery='';
@@ -1703,11 +1729,22 @@ function renderAll(filter='all',query=''){
   mainEl.innerHTML='';let total=0;
   const avisSection=DATA.find(d=>d.id==='avis');
   if(avisSection)avisSection.items=avisData;
+  const allSections=[...DATA];
+  if(adminTextsData.length){
+    allSections.unshift({
+      id:'admin-content',
+      label:'🛠️ Textes Admin',
+      icon:'🛠️',
+      cls:'s-admin-content',
+      type:'admintext',
+      items:adminTextsData
+    });
+  }
 
-  DATA.forEach(section=>{
+  allSections.forEach(section=>{
     if(filter!=='all'&&section.id!==filter)return;
     let items=section.items;
-    if(section.type!=='avis'&&section.type!=='quiz'){
+    if(section.type!=='avis'&&section.type!=='quiz'&&section.type!=='admintext'){
       items=items.filter(it=>{
         if(!query)return true;
         const q=query.toLowerCase();
@@ -1717,6 +1754,12 @@ function renderAll(filter='all',query=''){
         if(section.type==='projet')return it.title.toLowerCase().includes(q)||it.desc.toLowerCase().includes(q);
         if(section.type==='application')return it.domaine.toLowerCase().includes(q)||it.description.toLowerCase().includes(q);
         return(it.kw&&it.kw.toLowerCase().includes(q))||(it.def&&it.def.toLowerCase().includes(q))||(it.deep&&it.deep.toLowerCase().includes(q));
+      });
+    }else if(section.type==='admintext'){
+      items=items.filter(it=>{
+        if(!query)return true;
+        const q=query.toLowerCase();
+        return (it.title||'').toLowerCase().includes(q)||(it.body||'').toLowerCase().includes(q)||(it.deep||'').toLowerCase().includes(q)||(it.code||'').toLowerCase().includes(q);
       });
     }
     if(!items.length&&section.type!=='avis')return;
@@ -1746,6 +1789,15 @@ function renderAll(filter='all',query=''){
     }else if(section.type==='quiz'){
       gridCls='quiz-grid';
       html=items.map((it,i)=>buildQuizCard(it,i)).join('');
+    }else if(section.type==='admintext'){
+      html=items.map((it,i)=>{
+        const kwH=hl(escapeHTML(it.title||'Sans titre'),query);
+        const defH=hl(escapeHTML(it.body||''),query).replace(/\n/g,'<br>');
+        const deep=it.deep?`<div class="card-deep">${hl(escapeHTML(it.deep),query).replace(/\n/g,'<br>')}</div><button class="expand-btn" onclick="toggleCard(this)">⊕ Approfondir</button>`:'';
+        const code=it.code?hl(escapeHTML(it.code),query):'';
+        const badge=`<span class="badge" style="background:#ff3c5a22;color:#ff8ca0;border:1px solid #ff3c5a55">ADMIN</span>`;
+        return `<div class="card" style="animation-delay:${i*.04}s"><div class="card-keyword">${kwH}${badge}</div><div class="card-def">${defH}</div>${deep}${code?`<div class="card-example">${code}</div>`:''}</div>`;
+      }).join('');
     }else if(section.type==='avis'){
       gridCls='avis-grid';
       html=buildAvisSection();
@@ -1766,7 +1818,11 @@ function renderAll(filter='all',query=''){
   if(query){cnt.textContent=`${total} résultat${total!==1?'s':''}`;cnt.className=total>0?'has-results':''}
   else{cnt.textContent='';cnt.className='';}
   const fc=document.getElementById('footer-count');if(fc)fc.textContent=total+' entrées';
-  const st=document.getElementById('stat-terms');if(st)st.textContent=DATA.reduce((a,s)=>a+(s.type==='avis'?0:s.items.length),0)+' entrées';
+  const st=document.getElementById('stat-terms');
+  if(st){
+    const baseCount=DATA.reduce((a,s)=>a+(s.type==='avis'?0:s.items.length),0);
+    st.textContent=(baseCount+adminTextsData.length)+' entrées';
+  }
   if(!total&&query&&mainEl)mainEl.innerHTML=`<div class="empty"><div class="empty-icon">⌀</div><p>Aucun résultat pour "<strong>${query}</strong>"</p></div>`;
 }
 
@@ -1794,6 +1850,7 @@ document.addEventListener('keydown',e=>{
     if(searchEl&&document.activeElement===searchEl){searchEl.blur();if(clearBtn)clearBtn.click();}
     document.getElementById('pp-edit-modal')?.classList.add('hidden');
     closeAdminPanel();
+    closeAdminTextPanel();
     closeMembres();
     closePublicProfile();
   }
@@ -1894,6 +1951,101 @@ async function openPublicProfile(username){
 }
 function closePublicProfile(){document.getElementById('public-profile-overlay')?.classList.add('hidden');}
 
+async function loadAdminTexts(){
+  const {data,error}=await sb.from('admin_texts').select('*').order('updated_at',{ascending:false});
+  if(error){
+    console.warn('admin_texts load error:',error.message);
+    adminTextsData=[];
+    refreshAdminTextList();
+    return;
+  }
+  adminTextsData=(data||[]).map(r=>({
+    id:r.id,
+    title:r.title||'Sans titre',
+    body:r.body||'',
+    deep:r.deep||'',
+    code:r.code||''
+  }));
+  refreshAdminTextList();
+}
+function openAdminTextPanel(){
+  if(!isAdmin()){showToast('⛔ Accès refusé');return;}
+  document.getElementById('admin-text-overlay')?.classList.remove('hidden');
+  resetAdminTextForm();
+  loadAdminTexts();
+}
+function closeAdminTextPanel(){document.getElementById('admin-text-overlay')?.classList.add('hidden');}
+function resetAdminTextForm(){
+  adminTextEditId=null;
+  const t=document.getElementById('admin-text-title');
+  const b=document.getElementById('admin-text-body');
+  const d=document.getElementById('admin-text-deep');
+  const c=document.getElementById('admin-text-code');
+  if(t)t.value='';if(b)b.value='';if(d)d.value='';if(c)c.value='';
+  const btn=document.getElementById('admin-text-save-btn');
+  if(btn)btn.textContent='CRÉER LE TEXTE';
+}
+function refreshAdminTextList(){
+  const list=document.getElementById('admin-text-list');
+  if(!list)return;
+  if(!adminTextsData.length){
+    list.innerHTML='<div style="padding:12px;color:var(--muted);font-size:11px">Aucun texte admin pour le moment.</div>';
+    return;
+  }
+  list.innerHTML=adminTextsData.map(it=>`<div class="admin-text-item">
+    <div style="flex:1;min-width:0">
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(it.title)}</div>
+      <div style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(it.body)}</div>
+    </div>
+    <button onclick="editAdminText(${it.id})" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:10px;padding:5px 8px;cursor:pointer">Éditer</button>
+    <button onclick="deleteAdminText(${it.id})" style="background:rgba(255,60,90,.2);border:1px solid var(--red);border-radius:5px;color:var(--red);font-size:10px;padding:5px 8px;cursor:pointer">Suppr.</button>
+  </div>`).join('');
+}
+function editAdminText(id){
+  const it=adminTextsData.find(x=>x.id===id);
+  if(!it)return;
+  adminTextEditId=id;
+  document.getElementById('admin-text-title').value=it.title||'';
+  document.getElementById('admin-text-body').value=it.body||'';
+  document.getElementById('admin-text-deep').value=it.deep||'';
+  document.getElementById('admin-text-code').value=it.code||'';
+  const btn=document.getElementById('admin-text-save-btn');
+  if(btn)btn.textContent='METTRE À JOUR';
+}
+async function saveAdminText(){
+  if(!isAdmin())return;
+  const title=document.getElementById('admin-text-title')?.value.trim()||'';
+  const body=document.getElementById('admin-text-body')?.value.trim()||'';
+  const deep=document.getElementById('admin-text-deep')?.value.trim()||'';
+  const code=document.getElementById('admin-text-code')?.value||'';
+  if(!title||!body){showToast('Titre + texte principal requis');return;}
+  const payload={title,body,deep,code,updated_at:new Date().toISOString()};
+  let error=null;
+  if(adminTextEditId){
+    ({error}=await sb.from('admin_texts').update(payload).eq('id',adminTextEditId));
+  }else{
+    ({error}=await sb.from('admin_texts').insert({...payload,created_at:new Date().toISOString()}));
+  }
+  if(error){
+    if((error.message||'').toLowerCase().includes('admin_texts'))showToast('Table admin_texts manquante: ajoute le script SQL.');
+    else showToast('Erreur sauvegarde: '+error.message);
+    return;
+  }
+  showToast(adminTextEditId?'✅ Texte mis à jour':'✅ Texte créé');
+  resetAdminTextForm();
+  await loadAdminTexts();
+  renderAll(currentFilter,currentQuery);
+}
+async function deleteAdminText(id){
+  if(!isAdmin())return;
+  if(!confirm('Supprimer ce texte admin ?'))return;
+  const {error}=await sb.from('admin_texts').delete().eq('id',id);
+  if(error){showToast('Erreur suppression texte: '+error.message);return;}
+  showToast('🗑️ Texte supprimé');
+  await loadAdminTexts();
+  renderAll(currentFilter,currentQuery);
+}
+
 /* ══ XP BOOST LEADERBOARD ══ */
 async function giveXPBoostTop(){
   if(!isAdmin()){showToast('⛔ Admin seulement');return;}
@@ -1910,6 +2062,7 @@ async function giveXPBoostTop(){
 function openAdminPanel(){
   if(!isAdmin()){showToast('⛔ Accès refusé');return;}
   document.getElementById('admin-overlay').classList.remove('hidden');
+  loadAdminTexts();
 }
 function closeAdminPanel(){document.getElementById('admin-overlay').classList.add('hidden');}
 
@@ -1973,7 +2126,11 @@ async function loadAdminAvis(){
 
 /* ══ INIT ══ */
 showPage('home');
-loadAvis().then(()=>renderAll());
+(async()=>{
+  await loadAdminTexts();
+  await loadAvis();
+  renderAll();
+})();
 setTimeout(()=>showToast('// Persona 3 Theme — Python Dico · by Ace'),600);
 </script>
 
@@ -1999,6 +2156,28 @@ setTimeout(()=>showToast('// Persona 3 Theme — Python Dico · by Ace'),600);
   </div>
 </div>
 
+<!-- ADMIN TEXT OVERLAY -->
+<div id="admin-text-overlay" class="hidden" onclick="if(event.target.id==='admin-text-overlay')closeAdminTextPanel()">
+  <div class="admin-text-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="admin-text-title">ÉDITEUR DE TEXTES ADMIN</div>
+      <button onclick="closeAdminTextPanel()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div class="admin-text-grid">
+      <div class="full"><input id="admin-text-title" class="admin-text-input" type="text" placeholder="Titre / mot-clé du texte"></div>
+      <div class="full"><textarea id="admin-text-body" class="admin-text-area" placeholder="Texte principal (obligatoire)"></textarea></div>
+      <div><textarea id="admin-text-deep" class="admin-text-area" placeholder="Approfondissement (optionnel)"></textarea></div>
+      <div><textarea id="admin-text-code" class="admin-text-area" placeholder="Code exemple (optionnel)"></textarea></div>
+      <div class="full" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="admin-text-save-btn" onclick="saveAdminText()" style="background:linear-gradient(135deg,var(--green),#00b876);border:none;border-radius:6px;padding:10px 14px;color:#001b12;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;cursor:pointer">CRÉER LE TEXTE</button>
+        <button onclick="resetAdminTextForm()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;color:var(--text);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">NOUVEAU</button>
+      </div>
+    </div>
+    <div style="margin-top:12px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px">TEXTES EXISTANTS</div>
+    <div id="admin-text-list" class="admin-text-list"></div>
+  </div>
+</div>
+
 <!-- ADMIN OVERLAY -->
 <div id="admin-overlay" class="hidden" style="position:fixed;inset:0;z-index:700;display:flex;align-items:center;justify-content:center;background:rgba(2,5,16,.9)">
   <div style="background:var(--surface);border:1px solid var(--red);border-radius:14px;width:min(500px,95vw);max-height:85vh;overflow-y:auto;padding:24px">
@@ -2009,6 +2188,7 @@ setTimeout(()=>showToast('// Persona 3 Theme — Python Dico · by Ace'),600);
     <div style="display:flex;flex-direction:column;gap:12px">
       <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px">ACTIONS RAPIDES</div>
       <button onclick="giveXPBoostTop()" style="background:linear-gradient(135deg,var(--gold),#b8860b);border:none;border-radius:8px;padding:12px;color:#000;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;cursor:pointer">🏆 DONNER BOOST XP TOP 3</button>
+      <button onclick="openAdminTextPanel()" style="background:linear-gradient(135deg,#1570cc,#00cfff);border:none;border-radius:8px;padding:10px;color:#001827;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;cursor:pointer">✍️ GÉRER LES TEXTES</button>
       <div style="margin-top:8px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px">GESTION UTILISATEUR</div>
       <div style="display:flex;gap:8px">
         <input id="admin-username-input" type="text" placeholder="@username" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'Space Mono',monospace;font-size:11px;outline:none">
