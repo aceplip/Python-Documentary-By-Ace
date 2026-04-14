@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Python Dico · Memento Mori · by Ace</title>
+<title>Python Dico · Persona 3 Theme · by Ace</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -90,6 +90,17 @@ body.scrolled #persona-bg{opacity:.09}
 .ubar-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:white;flex-shrink:0}
 .ubar-info{display:flex;flex-direction:column;gap:1px;min-width:0}
 .ubar-name{font-family:'Space Mono',monospace;font-size:11px;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.admin-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  margin-left:6px;padding:1px 7px;border-radius:999px;
+  border:1px solid rgba(255,60,90,.55);
+  background:linear-gradient(135deg,rgba(255,60,90,.25),rgba(170,26,48,.18));
+  color:#ffd3dc;font-family:'Space Mono',monospace;font-size:8px;
+  letter-spacing:1px;text-transform:uppercase;font-weight:700;
+  vertical-align:middle;box-shadow:0 0 10px rgba(255,60,90,.22);
+}
+.admin-chip::before{content:'◆';font-size:7px;color:#ff9fb0}
+.admin-chip.mini{padding:1px 6px;font-size:7px}
 .ubar-level{font-family:'Space Mono',monospace;font-size:9px;color:var(--gold);letter-spacing:1px}
 .ubar-xp-wrap{width:70px;flex-shrink:0}
 .ubar-xp-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
@@ -600,6 +611,45 @@ footer a:hover{color:var(--accent)}
 /* Image input hidden */
 #banner-input,#avatar-input{display:none}
 
+/* Public profile modal */
+#public-profile-overlay{
+  position:fixed;inset:0;z-index:650;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(2,5,16,.88);backdrop-filter:blur(10px);
+}
+#public-profile-overlay.hidden{display:none}
+.public-profile-box{
+  width:min(520px,95vw);max-height:84vh;overflow-y:auto;
+  background:var(--surface);border:1px solid var(--border2);border-radius:14px;
+}
+.public-profile-banner{
+  height:130px;background:linear-gradient(135deg,#0a1628,#1a3060,#0e1e38);
+  border-bottom:1px solid var(--border);background-size:cover;background-position:center;
+}
+.public-profile-content{padding:16px 18px 18px}
+.public-profile-head{display:flex;align-items:center;gap:12px;margin-top:-42px}
+.public-profile-avatar{
+  width:72px;height:72px;border-radius:50%;border:2px solid var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  font-family:'Orbitron',monospace;font-weight:700;color:white;font-size:24px;overflow:hidden;
+}
+.public-profile-name{font-family:'Orbitron',monospace;font-size:19px;color:white}
+.public-profile-meta{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px}
+.public-profile-bio{
+  margin-top:12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;
+  background:var(--surface2);font-size:13px;line-height:1.6;color:var(--text);
+}
+.public-profile-stats{
+  margin-top:12px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+}
+.public-profile-stat{
+  border:1px solid var(--border);border-radius:8px;background:var(--surface2);
+  padding:10px;text-align:center;
+}
+.public-profile-stat-num{font-family:'Orbitron',monospace;font-size:15px;color:var(--accent2)}
+.public-profile-stat-label{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+
 /* Top nav tab for profile */
 .main-nav-tab{
   position:fixed;top:8px;left:50%;transform:translateX(-50%);
@@ -616,6 +666,10 @@ footer a:hover{color:var(--accent)}
 .main-nav-btn:last-child{border-right:none}
 .main-nav-btn:hover{background:rgba(30,144,255,.08);color:var(--accent2)}
 .main-nav-btn.active{background:var(--accent);color:white}
+@media(min-width:901px){
+  .main-nav-tab{border-radius:6px}
+  .main-nav-btn{padding:6px 11px;font-size:8px;letter-spacing:1px}
+}
 
 @media(max-width:600px){
   .main-nav-tab{left:56px;transform:none;max-width:calc(100vw - 72px);overflow-x:auto}
@@ -633,7 +687,7 @@ footer a:hover{color:var(--accent)}
 <div id="progress-bar" style="width:0%"></div>
 <canvas id="bg-canvas"></canvas>
 <div id="persona-bg"></div>
-<div id="memento-clock">MEMENTO MORI · <span id="clock-time">00:00:00</span></div>
+<div id="memento-clock">PERSONA 3 · <span id="clock-time">00:00:00</span></div>
 <div id="toast"></div>
 
 <!-- TOP NAV TABS -->
@@ -646,7 +700,7 @@ footer a:hover{color:var(--accent)}
 <div id="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">Python<span>Dico</span></div>
-    <div class="auth-sub">// Memento Mori Edition · by Ace</div>
+    <div class="auth-sub">// Persona 3 Reload Theme · by Ace</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Connexion</button>
       <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Créer un compte</button>
@@ -732,7 +786,7 @@ footer a:hover{color:var(--accent)}
 </div>
 <main id="main"></main>
 <footer>
-  <span>Python Dictionnaire · Memento Mori Edition</span> ·
+  <span>Python Dictionnaire · Persona 3 Theme</span> ·
   <span>by <strong style="color:var(--accent2)">Ace</strong> · <strong style="color:#5865F2">wz6d</strong></span> ·
   <a href="https://discord.gg/personafr" target="_blank" style="color:#5865F2">discord.gg/personafr</a> ·
   <span id="footer-count">Chargement…</span>
@@ -1023,9 +1077,11 @@ function updateUserBar(){
   if(!userProfile)return;
   const lv=getLevel(userProfile.xp);
   const pct=getLevelPct(userProfile.xp);
-  const adminTag=isAdmin()?' [ADMIN]':'';
+  const uname=(userProfile.username||'Utilisateur');
   document.getElementById('user-bar').classList.remove('hidden');
-  document.getElementById('ubar-name').textContent=(userProfile.username||'Utilisateur')+adminTag;
+  const ubarNameEl=document.getElementById('ubar-name');
+  ubarNameEl.textContent=uname;
+  if(isAdmin())ubarNameEl.innerHTML+=` <span class="admin-chip mini">ADMIN</span>`;
   document.getElementById('ubar-level').textContent=lv.name.toUpperCase();
   document.getElementById('ubar-avatar').textContent=(userProfile.username||'?')[0].toUpperCase();
   document.getElementById('ubar-xp-fill').style.width=pct+'%';
@@ -1060,7 +1116,9 @@ function renderProfilePage(){
   document.getElementById('pp-banner').style.background=`linear-gradient(135deg, #0a1628, ${lv.color}33, #0e1e38)`;
 
   // Info
-  document.getElementById('pp-username').textContent=(userProfile.username||'Utilisateur')+(isAdmin()?' [ADMIN]':'');
+  const ppUsernameEl=document.getElementById('pp-username');
+  ppUsernameEl.textContent=(userProfile.username||'Utilisateur');
+  if(isAdmin())ppUsernameEl.innerHTML+=` <span class="admin-chip">ADMIN</span>`;
   const classBadge=document.getElementById('pp-class-badge');
   classBadge.style.background=lv.color+'22';
   classBadge.style.border=`1px solid ${lv.color}44`;
@@ -1476,7 +1534,7 @@ s.<span class="fn">title</span>()      <span class="cmt"># "Hello Monde"</span>`
     contenu = f.<span class="fn">read</span>()
 
 <span class="kw">with</span> <span class="fn">open</span>(<span class="str">"f.txt"</span>,<span class="str">"w"</span>) <span class="kw">as</span> f:
-    f.<span class="fn">write</span>(<span class="str">"Memento Mori\n"</span>)`},
+    f.<span class="fn">write</span>(<span class="str">"Persona 3 Reload\n"</span>)`},
     {kw:"json — sauvegarder des données",def:"Convertit dicts/listes Python ↔ JSON. Idéal pour persister des données entre exécutions.",badge:"module",badgeColor:"#a864ff",code:`<span class="kw">import</span> json
 <span class="kw">with</span> <span class="fn">open</span>(<span class="str">"save.json"</span>,<span class="str">"w"</span>) <span class="kw">as</span> f:
     json.<span class="fn">dump</span>(data, f, indent=<span class="num">2</span>)
@@ -1735,6 +1793,7 @@ document.addEventListener('keydown',e=>{
     document.getElementById('pp-edit-modal')?.classList.add('hidden');
     closeAdminPanel();
     closeMembres();
+    closePublicProfile();
   }
   if(e.key==='Tab'&&e.target.classList.contains('code-editor')){e.preventDefault();const s=e.target.selectionStart;e.target.value=e.target.value.substring(0,s)+'    '+e.target.value.substring(e.target.selectionEnd);e.target.selectionStart=e.target.selectionEnd=s+4;}
 });
@@ -1792,7 +1851,7 @@ async function searchMembres(query){
   sug.style.cssText='position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:0 0 8px 8px;z-index:500;overflow:hidden';
   sug.innerHTML=data.map(m=>{
     const lv=getLevel(m.xp);
-    return`<div style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)" onmousedown="event.preventDefault()" onclick="document.getElementById('membres-suggestions')?.remove();searchEl.value='';currentQuery='';renderAll();">
+    return`<div style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)" onmousedown="event.preventDefault()" onclick="document.getElementById('membres-suggestions')?.remove();openPublicProfile('${m.username.replace(/'/g,"\\'")}');">
       <span style="font-size:14px">${lv.icon}</span>
       <span style="font-family:'Space Mono',monospace;font-size:11px;color:white">@${m.username}</span>
       <span style="margin-left:auto;font-family:'Orbitron',monospace;font-size:10px;color:var(--gold)">${m.xp} XP</span>
@@ -1801,6 +1860,37 @@ async function searchMembres(query){
   wrap.style.position='relative';
   wrap.appendChild(sug);
 }
+
+async function openPublicProfile(username){
+  const overlay=document.getElementById('public-profile-overlay');
+  const body=document.getElementById('public-profile-body');
+  if(!overlay||!body)return;
+  overlay.classList.remove('hidden');
+  body.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">Chargement…</div>';
+  const {data,error}=await sb.from('profiles').select('username,xp,exercises_done,streak,bio,avatar_url,banner_url,banned').eq('username',username).maybeSingle();
+  if(error||!data){body.innerHTML='<div style="padding:20px;color:var(--red);text-align:center">Profil introuvable</div>';return;}
+  const lv=getLevel(data.xp||0);
+  const avatar=data.avatar_url?`<img src="${data.avatar_url}" style="width:100%;height:100%;object-fit:cover">`:`${(data.username||'?')[0].toUpperCase()}`;
+  const bannerStyle=data.banner_url?`background-image:url('${data.banner_url}')`:'';
+  body.innerHTML=`
+    <div class="public-profile-banner" style="${bannerStyle}"></div>
+    <div class="public-profile-content">
+      <div class="public-profile-head">
+        <div class="public-profile-avatar">${avatar}</div>
+        <div>
+          <div class="public-profile-name">@${data.username}${data.banned?' <span class="admin-chip mini">BANNI</span>':''}</div>
+          <div class="public-profile-meta">${lv.icon} ${lv.name} · ${data.xp||0} XP</div>
+        </div>
+      </div>
+      <div class="public-profile-bio">${data.bio?data.bio.replace(/\n/g,'<br>'):'Aucune bio.'}</div>
+      <div class="public-profile-stats">
+        <div class="public-profile-stat"><div class="public-profile-stat-num">${data.xp||0}</div><div class="public-profile-stat-label">XP</div></div>
+        <div class="public-profile-stat"><div class="public-profile-stat-num">${data.exercises_done||0}</div><div class="public-profile-stat-label">Quiz</div></div>
+        <div class="public-profile-stat"><div class="public-profile-stat-num">${data.streak||0}</div><div class="public-profile-stat-label">Streak</div></div>
+      </div>
+    </div>`;
+}
+function closePublicProfile(){document.getElementById('public-profile-overlay')?.classList.add('hidden');}
 
 /* ══ XP BOOST LEADERBOARD ══ */
 async function giveXPBoostTop(){
@@ -1882,7 +1972,7 @@ async function loadAdminAvis(){
 /* ══ INIT ══ */
 showPage('home');
 loadAvis().then(()=>renderAll());
-setTimeout(()=>showToast('// Memento Mori — Python Dico · by Ace'),600);
+setTimeout(()=>showToast('// Persona 3 Theme — Python Dico · by Ace'),600);
 </script>
 
 <!-- MEMBRES OVERLAY -->
@@ -1893,6 +1983,17 @@ setTimeout(()=>showToast('// Memento Mori — Python Dico · by Ace'),600);
       <button onclick="closeMembres()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
     </div>
     <div id="membres-list" style="overflow-y:auto;flex:1"></div>
+  </div>
+</div>
+
+<!-- PUBLIC PROFILE OVERLAY -->
+<div id="public-profile-overlay" class="hidden" onclick="if(event.target.id==='public-profile-overlay')closePublicProfile()">
+  <div class="public-profile-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border)">
+      <div style="font-family:'Orbitron',monospace;font-size:13px;color:white">PROFIL UTILISATEUR</div>
+      <button onclick="closePublicProfile()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div id="public-profile-body"></div>
   </div>
 </div>
 
