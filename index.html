@@ -1023,8 +1023,9 @@ function updateUserBar(){
   if(!userProfile)return;
   const lv=getLevel(userProfile.xp);
   const pct=getLevelPct(userProfile.xp);
+  const adminTag=isAdmin()?' [ADMIN]':'';
   document.getElementById('user-bar').classList.remove('hidden');
-  document.getElementById('ubar-name').textContent=userProfile.username;
+  document.getElementById('ubar-name').textContent=(userProfile.username||'Utilisateur')+adminTag;
   document.getElementById('ubar-level').textContent=lv.name.toUpperCase();
   document.getElementById('ubar-avatar').textContent=(userProfile.username||'?')[0].toUpperCase();
   document.getElementById('ubar-xp-fill').style.width=pct+'%';
@@ -1059,7 +1060,7 @@ function renderProfilePage(){
   document.getElementById('pp-banner').style.background=`linear-gradient(135deg, #0a1628, ${lv.color}33, #0e1e38)`;
 
   // Info
-  document.getElementById('pp-username').textContent=userProfile.username||'Utilisateur';
+  document.getElementById('pp-username').textContent=(userProfile.username||'Utilisateur')+(isAdmin()?' [ADMIN]':'');
   const classBadge=document.getElementById('pp-class-badge');
   classBadge.style.background=lv.color+'22';
   classBadge.style.border=`1px solid ${lv.color}44`;
