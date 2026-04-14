@@ -1,0 +1,1925 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Python Dico · Memento Mori · by Ace</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ═══════════════════════════════════════════════
+   CONFIG — remplace ces deux valeurs après setup
+═══════════════════════════════════════════════ */
+:root{
+  --sb-url:"https://hxfvsdxzkmsgvvqnenef.supabase.co";
+  --sb-key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4ZnZzZHh6a21zZ3Z2cW5lbmVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTczNjAsImV4cCI6MjA5MTY5MzM2MH0.oV2KjuBgk6we0PUqycwMGU5L6c50iiA3FqkAXnJoIWM";
+
+  --bg:#020510;--bg2:#050c1a;--surface:#0a1628;--surface2:#0e1e38;
+  --border:#1a3060;--border2:#2a4a8a;
+  --accent:#1e90ff;--accent2:#00cfff;--accent3:#a8d8ff;
+  --gold:#ffd700;--teal:#00e5cc;--red:#ff3c5a;--green:#00e596;
+  --text:#cce4ff;--muted:#4a6a9a;--code-bg:#020c18;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+.hidden{display:none !important}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ── BG ── */
+#persona-bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:url('https://media1.tenor.com/m/orMMmB-IQXwAAAAC/persona-3-reload-train-sunset.gif') center/cover;
+  opacity:.14;transition:opacity 1s}
+#persona-bg::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(to bottom,rgba(2,5,16,.6) 0%,rgba(2,5,16,.2) 40%,rgba(2,5,16,.8) 100%)}
+body.scrolled #persona-bg{opacity:.09}
+#bg-canvas{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.25}
+
+/* ── PROGRESS ── */
+#progress-bar{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));box-shadow:0 0 8px var(--accent);z-index:999;transition:width .1s linear}
+
+/* ── CLOCK ── */
+#memento-clock{position:fixed;top:14px;right:16px;z-index:300;font-family:'Orbitron',monospace;font-size:11px;color:var(--accent2);letter-spacing:2px;text-shadow:0 0 10px var(--accent2);display:flex;align-items:center;gap:6px;pointer-events:none}
+#memento-clock::before{content:'';width:6px;height:6px;background:var(--accent2);border-radius:50%;box-shadow:0 0 8px var(--accent2);animation:pulse-dot 2s infinite;flex-shrink:0}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+
+/* ── DISCORD BTN ── */
+#discord-btn{position:fixed;bottom:20px;left:16px;z-index:300;
+  background:linear-gradient(135deg,#5865F2,#4752c4);border:1px solid rgba(88,101,242,.5);
+  border-radius:10px;padding:9px 14px;display:flex;align-items:center;gap:9px;
+  text-decoration:none;color:white;font-family:'Space Mono',monospace;font-size:11px;
+  box-shadow:0 4px 20px rgba(88,101,242,.35);transition:all .3s}
+#discord-btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(88,101,242,.5)}
+#discord-btn svg{width:18px;height:18px;flex-shrink:0}
+.disc-info{display:flex;flex-direction:column;gap:1px}
+.disc-label{font-size:8px;color:rgba(255,255,255,.6);letter-spacing:1.5px;text-transform:uppercase}
+.disc-name{font-size:11px;font-weight:600}
+
+/* ══════════════════════════════════
+   AUTH MODAL
+══════════════════════════════════ */
+#auth-overlay{position:fixed;inset:0;z-index:500;background:rgba(2,5,16,.92);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:20px}
+#auth-overlay.hidden{display:none}
+.auth-box{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:36px 32px;width:100%;max-width:400px;position:relative;overflow:hidden}
+.auth-box::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--teal))}
+.auth-logo{font-family:'Orbitron',monospace;font-size:20px;font-weight:900;color:white;margin-bottom:4px}
+.auth-logo span{color:var(--accent)}
+.auth-sub{font-size:12px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:28px;font-family:'Space Mono',monospace}
+.auth-tabs{display:flex;gap:0;margin-bottom:24px;border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+.auth-tab{flex:1;padding:9px;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;background:none;border:none;color:var(--muted);cursor:pointer;transition:all .2s}
+.auth-tab.active{background:var(--accent);color:white}
+.auth-field{margin-bottom:16px}
+.auth-field label{display:block;font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.auth-field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:11px 14px;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;outline:none;transition:border-color .2s}
+.auth-field input:focus{border-color:var(--accent)}
+.auth-btn{width:100%;background:linear-gradient(135deg,var(--accent),#1570cc);border:none;border-radius:6px;padding:13px;color:white;font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:all .3s;margin-top:4px}
+.auth-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(30,144,255,.4)}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.auth-error{font-size:12px;color:var(--red);margin-top:10px;text-align:center;font-family:'Space Mono',monospace;min-height:18px}
+.auth-skip{display:block;text-align:center;margin-top:16px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:color .2s}
+.auth-skip:hover{color:var(--accent3)}
+
+/* ══════════════════════════════════
+   USER PROFILE BAR (top-left when logged in)
+══════════════════════════════════ */
+#user-bar{position:fixed;top:10px;left:16px;z-index:300;display:flex;align-items:center;gap:10px;background:rgba(10,22,40,.85);border:1px solid var(--border2);border-radius:10px;padding:6px 12px;backdrop-filter:blur(8px);cursor:pointer;transition:all .2s;max-width:calc(100vw - 120px)}
+#user-bar:hover{border-color:var(--accent2)}
+#user-bar.hidden{display:none}
+.ubar-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:white;flex-shrink:0}
+.ubar-info{display:flex;flex-direction:column;gap:1px;min-width:0}
+.ubar-name{font-family:'Space Mono',monospace;font-size:11px;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.ubar-level{font-family:'Space Mono',monospace;font-size:9px;color:var(--gold);letter-spacing:1px}
+.ubar-xp-wrap{width:70px;flex-shrink:0}
+.ubar-xp-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.ubar-xp-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .5s ease}
+.ubar-xp-text{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);margin-top:2px}
+
+/* Profile dropdown */
+#profile-panel{position:fixed;top:54px;left:16px;z-index:299;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:20px;width:280px;box-shadow:0 12px 40px rgba(0,0,0,.5);backdrop-filter:blur(12px);display:none}
+#profile-panel.open{display:block;animation:slideDown .2s ease}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.pp-name{font-family:'Orbitron',monospace;font-size:16px;font-weight:700;color:white;margin-bottom:2px}
+.pp-badge{font-family:'Space Mono',monospace;font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+.pp-stat-row{display:flex;gap:10px;margin-bottom:14px}
+.pp-stat{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;text-align:center}
+.pp-stat-num{font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:var(--accent2)}
+.pp-stat-label{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+.pp-xp-section{margin-bottom:14px}
+.pp-xp-label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;display:flex;justify-content:space-between}
+.pp-xp-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.pp-xp-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--teal));border-radius:3px;transition:width .6s ease}
+.pp-actions{display:flex;gap:8px}
+.pp-btn{flex:1;background:none;border:1px solid var(--border);color:var(--muted);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;padding:7px;border-radius:4px;cursor:pointer;transition:all .2s;text-transform:uppercase}
+.pp-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+.pp-btn.logout{border-color:rgba(255,60,90,.3);color:var(--red)}
+.pp-btn.logout:hover{background:rgba(255,60,90,.1)}
+
+/* ══════════════════════════════════
+   TOAST
+══════════════════════════════════ */
+#toast{position:fixed;bottom:80px;right:16px;background:var(--surface2);border:1px solid var(--accent);color:var(--accent2);font-family:'Space Mono',monospace;font-size:11px;letter-spacing:1px;padding:10px 16px;border-radius:6px;z-index:400;transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.16,1,.3,1);box-shadow:0 0 20px rgba(30,144,255,.2);max-width:280px}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.xp{border-color:var(--gold);color:var(--gold);background:rgba(255,215,0,.08)}
+
+/* ══════════════════════════════════
+   HEADER
+══════════════════════════════════ */
+header{position:relative;z-index:10;padding:60px 24px 40px;border-bottom:1px solid var(--border);overflow:hidden}
+.header-glow{position:absolute;top:-100px;left:-100px;width:500px;height:500px;background:radial-gradient(circle,rgba(30,144,255,.12) 0%,transparent 65%);pointer-events:none;animation:glow-drift 8s ease-in-out infinite alternate}
+@keyframes glow-drift{from{transform:translate(0,0)}to{transform:translate(50px,30px)}}
+.memento-tag{font-family:'Orbitron',monospace;font-size:9px;color:var(--accent2);letter-spacing:4px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.memento-tag::before,.memento-tag::after{content:'';height:1px;width:30px;background:linear-gradient(90deg,transparent,var(--accent2))}
+.memento-tag::after{transform:scaleX(-1)}
+h1{font-family:'Orbitron',monospace;font-size:clamp(26px,5vw,60px);font-weight:900;line-height:1.05;letter-spacing:-1px;text-shadow:0 0 40px rgba(30,144,255,.5)}
+h1 .py{color:white}h1 .dico{color:var(--accent)}
+.subtitle{margin-top:12px;color:var(--muted);font-size:14px;max-width:520px;line-height:1.7}
+.stats-row{margin-top:20px;display:flex;gap:8px;flex-wrap:wrap}
+.stat-chip{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent3);background:rgba(30,144,255,.08);border:1px solid var(--border2);padding:4px 10px;border-radius:4px;letter-spacing:1px}
+
+/* ══════════════════════════════════
+   SEARCH
+══════════════════════════════════ */
+.search-wrap{position:sticky;top:0;z-index:100;padding:12px 190px 12px 24px;background:rgba(2,5,16,.82);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.search-inner{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:9px 14px;flex:1;min-width:200px;max-width:480px;transition:border-color .3s,box-shadow .3s}
+.search-inner:focus-within{border-color:var(--accent);box-shadow:0 0 18px rgba(30,144,255,.2)}
+.search-icon{color:var(--accent);font-size:14px;flex-shrink:0}
+#search{background:none;border:none;outline:none;color:var(--text);font-family:'Space Mono',monospace;font-size:12px;width:100%}
+#search::placeholder{color:var(--muted)}
+#search-count{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap}
+#search-count.has-results{color:var(--accent2)}
+#clear-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;display:none;transition:color .2s;padding:0 4px}
+#clear-btn:hover{color:var(--accent)}
+#clear-btn.visible{display:block}
+
+/* ══════════════════════════════════
+   NAV PILLS
+══════════════════════════════════ */
+.nav-pills{display:flex;gap:6px;padding:12px 24px;flex-wrap:wrap;border-bottom:1px solid var(--border);position:relative;z-index:10;background:rgba(2,5,16,.6);backdrop-filter:blur(8px)}
+.pill{font-family:'Space Mono',monospace;font-size:9px;padding:5px 12px;border-radius:3px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;transition:all .2s;letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
+.pill:hover{border-color:var(--accent2);color:var(--accent2)}
+.pill.active{background:var(--accent);border-color:var(--accent);color:white;box-shadow:0 0 12px rgba(30,144,255,.4)}
+.pill-gold{border-color:rgba(255,215,0,.4);color:var(--gold)}
+.pill-gold:hover{background:rgba(255,215,0,.08)}
+.pill-gold.active{background:linear-gradient(135deg,#b8860b,#ffd700);border-color:var(--gold);color:#000;box-shadow:0 0 12px rgba(255,215,0,.4)}
+.pill-green{border-color:rgba(0,229,150,.4);color:var(--green)}
+.pill-green:hover{background:rgba(0,229,150,.08)}
+.pill-green.active{background:linear-gradient(135deg,#009960,#00e596);border-color:var(--green);color:#000;box-shadow:0 0 12px rgba(0,229,150,.4)}
+.pill-red{border-color:rgba(255,60,90,.4);color:var(--red)}
+.pill-red.active{background:linear-gradient(135deg,#aa1a30,#ff3c5a);border-color:var(--red);color:white}
+
+/* ══════════════════════════════════
+   MAIN + SECTION
+══════════════════════════════════ */
+main{padding:32px 24px 100px;max-width:1500px;position:relative;z-index:10}
+.section{margin-bottom:64px}
+.section-header{display:flex;align-items:center;gap:14px;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid var(--border);position:relative;flex-wrap:wrap}
+.section-header::after{content:'';position:absolute;bottom:-1px;left:0;width:70px;height:2px;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.section-icon{width:38px;height:38px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid var(--border2)}
+.section-title{font-family:'Orbitron',monospace;font-size:15px;font-weight:700;letter-spacing:1px;color:white}
+.section-count{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);background:var(--surface2);padding:3px 8px;border-radius:3px;border:1px solid var(--border);letter-spacing:1px}
+
+/* ── CARDS ── */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:18px;transition:border-color .3s,transform .3s,box-shadow .3s;cursor:default;position:relative;overflow:hidden;animation:card-in .5s ease both}
+.card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent);opacity:0;transition:opacity .3s}
+.card:hover{border-color:var(--accent2);transform:translateY(-2px);box-shadow:0 6px 24px rgba(30,144,255,.12)}
+.card:hover::before{opacity:1}
+@keyframes card-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.card-keyword{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--gold);margin-bottom:7px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card-keyword mark,.card-def mark{background:rgba(255,215,0,.25);color:var(--gold);border-radius:2px;padding:0 2px}
+.badge{font-family:'Space Mono',monospace;font-size:8px;padding:2px 6px;border-radius:3px;letter-spacing:1.5px;text-transform:uppercase;flex-shrink:0}
+.card-def{font-size:13px;color:var(--text);line-height:1.75;margin-bottom:12px}
+.card-deep{font-size:12px;color:var(--accent3);line-height:1.7;margin-bottom:12px;padding:9px 12px;background:rgba(30,144,255,.05);border-left:2px solid var(--accent);border-radius:0 4px 4px 0;display:none}
+.card.expanded .card-deep{display:block}
+.card-example{background:var(--code-bg);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;padding:10px 14px;font-family:'Space Mono',monospace;font-size:10px;color:#80b8e8;line-height:1.8;white-space:pre;overflow-x:auto}
+.card-example .cmt{color:var(--muted)}.card-example .kw{color:var(--accent);font-weight:bold}.card-example .fn{color:var(--teal)}.card-example .str{color:#f7c96a}.card-example .num{color:#ff9d5c}
+.expand-btn{margin-top:8px;background:none;border:1px solid var(--border);color:var(--muted);font-family:'Space Mono',monospace;font-size:8px;letter-spacing:1px;padding:3px 8px;border-radius:3px;cursor:pointer;transition:all .2s;text-transform:uppercase}
+.expand-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+.card.expanded .expand-btn{border-color:var(--accent);color:var(--accent)}
+
+/* ── SECTION COLORS ── */
+.s-bases .section-icon{background:rgba(30,144,255,.12)}.s-bases .section-header::after{background:#1e90ff}
+.s-fonctions .section-icon{background:rgba(0,229,204,.1)}.s-fonctions .section-header::after{background:#00e5cc}
+.s-boucles .section-icon{background:rgba(255,215,0,.1)}.s-boucles .section-header::after{background:#ffd700}
+.s-conditions .section-icon{background:rgba(255,60,90,.12)}.s-conditions .section-header::after{background:#ff3c5a}
+.s-structures .section-icon{background:rgba(0,207,255,.1)}.s-structures .section-header::after{background:#00cfff}
+.s-classes .section-icon{background:rgba(168,100,255,.12)}.s-classes .section-header::after{background:#a864ff}
+.s-builtin .section-icon{background:rgba(0,229,150,.1)}.s-builtin .section-header::after{background:#00e596}
+.s-formules .section-icon{background:rgba(255,215,0,.1)}.s-formules .section-header::after{background:var(--gold)}
+.s-projets .section-icon{background:rgba(0,229,150,.12)}.s-projets .section-header::after{background:var(--green)}
+.s-erreurs .section-icon{background:rgba(255,60,90,.12)}.s-erreurs .section-header::after{background:var(--red)}
+.s-lecons .section-icon{background:rgba(0,207,255,.12)}.s-lecons .section-header::after{background:var(--accent2)}
+.s-exercices .section-icon{background:rgba(255,140,0,.12)}.s-exercices .section-header::after{background:#ff8c00}
+.s-strings .section-icon{background:rgba(247,201,106,.12)}.s-strings .section-header::after{background:#f7c96a}
+.s-fichiers .section-icon{background:rgba(0,229,150,.12)}.s-fichiers .section-header::after{background:#00e596}
+.s-cheatsheet .section-icon{background:rgba(30,144,255,.12)}.s-cheatsheet .section-header::after{background:#1e90ff}
+.s-applications .section-icon{background:rgba(0,200,200,.12)}.s-applications .section-header::after{background:#00cfff}
+.s-quiz .section-icon{background:rgba(168,100,255,.15)}.s-quiz .section-header::after{background:#a864ff}
+.s-avis .section-icon{background:rgba(255,215,0,.12)}.s-avis .section-header::after{background:var(--gold)}
+
+/* ── LECON CARD ── */
+.lecons-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),1fr));gap:16px}
+.lecon-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;animation:card-in .5s ease both}
+.lecon-header{background:linear-gradient(135deg,rgba(30,100,200,.3),rgba(0,150,200,.15));padding:18px 22px 14px;border-bottom:1px solid var(--border)}
+.lecon-num{font-family:'Orbitron',monospace;font-size:8px;color:var(--accent2);letter-spacing:3px;margin-bottom:5px}
+.lecon-title{font-family:'Orbitron',monospace;font-size:15px;font-weight:700;color:white}
+.lecon-body{padding:18px 22px}
+.lecon-intro{font-size:13px;color:var(--accent3);line-height:1.75;margin-bottom:16px;padding:11px 14px;background:rgba(30,144,255,.06);border-left:3px solid var(--accent2);border-radius:0 6px 6px 0}
+.lecon-section{margin-bottom:18px}
+.lecon-section h4{font-family:'Space Mono',monospace;font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.lecon-text{font-size:13px;color:var(--text);line-height:1.8;margin-bottom:8px}
+.lecon-code{background:var(--code-bg);border:1px solid var(--border);border-left:3px solid var(--teal);border-radius:0 6px 6px 0;padding:10px 14px;font-family:'Space Mono',monospace;font-size:10px;color:#80b8e8;line-height:1.8;white-space:pre;overflow-x:auto;margin-bottom:8px}
+.lecon-code .cmt{color:var(--muted)}.lecon-code .kw{color:var(--accent);font-weight:bold}.lecon-code .fn{color:var(--teal)}.lecon-code .str{color:#f7c96a}.lecon-code .num{color:#ff9d5c}
+.lecon-tip{background:rgba(255,215,0,.07);border:1px solid rgba(255,215,0,.2);border-radius:6px;padding:11px 14px;font-size:12px;color:#ffd700cc;line-height:1.7;margin-top:12px}
+.lecon-tip::before{content:'💡 '}
+
+/* ── QUIZ SECTION ── */
+.quiz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),1fr));gap:16px}
+.quiz-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;animation:card-in .5s ease both}
+.quiz-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.quiz-type-badge{font-family:'Space Mono',monospace;font-size:8px;padding:3px 8px;border-radius:3px;letter-spacing:1.5px;text-transform:uppercase;flex-shrink:0}
+.qtype-mcq{background:rgba(168,100,255,.15);color:#c878ff;border:1px solid rgba(168,100,255,.3)}
+.qtype-code{background:rgba(0,229,150,.12);color:var(--green);border:1px solid rgba(0,229,150,.3)}
+.qtype-tf{background:rgba(30,144,255,.12);color:var(--accent2);border:1px solid rgba(30,144,255,.3)}
+.qtype-fill{background:rgba(255,215,0,.12);color:var(--gold);border:1px solid rgba(255,215,0,.3)}
+.quiz-xp-tag{font-family:'Space Mono',monospace;font-size:8px;color:var(--gold);letter-spacing:1px;margin-left:auto}
+.quiz-title{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:white;flex:1;min-width:150px}
+.quiz-body{padding:16px 20px}
+.quiz-question{font-size:14px;color:var(--text);line-height:1.75;margin-bottom:14px;font-weight:500}
+.quiz-question code{font-family:'Space Mono',monospace;font-size:11px;background:rgba(30,144,255,.1);padding:1px 5px;border-radius:3px;color:var(--accent2)}
+/* MCQ options */
+.mcq-options{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+.mcq-opt{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;cursor:pointer;font-size:13px;color:var(--text);transition:all .2s;display:flex;align-items:center;gap:10px;text-align:left;width:100%;font-family:'Rajdhani',sans-serif}
+.mcq-opt:hover:not(:disabled){border-color:var(--accent2);background:rgba(30,144,255,.06)}
+.mcq-opt.correct{border-color:var(--green)!important;background:rgba(0,229,150,.12)!important;color:var(--green)}
+.mcq-opt.wrong{border-color:var(--red)!important;background:rgba(255,60,90,.1)!important;color:var(--red)}
+.mcq-opt:disabled{cursor:default;opacity:.8}
+.opt-letter{font-family:'Orbitron',monospace;font-size:10px;color:var(--muted);width:18px;flex-shrink:0}
+/* True/False */
+.tf-options{display:flex;gap:8px;margin-bottom:12px}
+.tf-btn{flex:1;padding:11px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text);font-family:'Orbitron',monospace;font-size:12px;cursor:pointer;transition:all .2s;font-weight:700}
+.tf-btn:hover:not(:disabled){transform:translateY(-1px)}
+.tf-btn.true-btn:hover{border-color:var(--green);color:var(--green)}
+.tf-btn.false-btn:hover{border-color:var(--red);color:var(--red)}
+.tf-btn.correct{border-color:var(--green)!important;background:rgba(0,229,150,.12)!important;color:var(--green)!important}
+.tf-btn.wrong{border-color:var(--red)!important;background:rgba(255,60,90,.1)!important;color:var(--red)!important}
+.tf-btn:disabled{cursor:default}
+/* Fill in blanks */
+.fill-area{margin-bottom:12px}
+.fill-code{background:var(--code-bg);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:12px 14px;font-family:'Space Mono',monospace;font-size:11px;color:#80b8e8;line-height:1.9;white-space:pre-wrap;overflow-x:auto;margin-bottom:8px}
+.fill-code .cmt{color:var(--muted)}.fill-code .kw{color:var(--accent);font-weight:bold}.fill-code .fn{color:var(--teal)}.fill-code .str{color:#f7c96a}.fill-code .num{color:#ff9d5c}
+.fill-code .blank{display:inline-block;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.4);border-radius:3px;min-width:60px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;color:var(--gold);outline:none;transition:all .2s}
+.fill-code .blank:focus{border-color:var(--gold);background:rgba(255,215,0,.15)}
+.fill-code .blank.correct{border-color:var(--green)!important;background:rgba(0,229,150,.15)!important;color:var(--green)!important}
+.fill-code .blank.wrong{border-color:var(--red)!important;background:rgba(255,60,90,.12)!important;color:var(--red)!important}
+/* Code editor */
+.code-editor{width:100%;min-height:120px;background:var(--code-bg);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:0 6px 6px 0;padding:12px 14px;font-family:'Space Mono',monospace;font-size:11px;color:#80b8e8;line-height:1.8;resize:vertical;outline:none;transition:border-color .2s;tab-size:4;margin-bottom:8px}
+.code-editor:focus{border-color:var(--green)}
+.code-output{background:var(--code-bg);border:1px solid var(--border);border-left:3px solid var(--teal);border-radius:0 6px 6px 0;padding:10px 14px;font-family:'Space Mono',monospace;font-size:11px;color:var(--teal);line-height:1.8;display:none;white-space:pre-wrap;margin-bottom:8px;max-height:120px;overflow-y:auto}
+.code-output.visible{display:block}
+/* Quiz actions */
+.quiz-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.quiz-submit-btn{background:linear-gradient(135deg,var(--accent),#1570cc);border:none;border-radius:5px;padding:9px 18px;color:white;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;transition:all .2s;text-transform:uppercase}
+.quiz-submit-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(30,144,255,.4)}
+.quiz-submit-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.quiz-reset-btn{background:none;border:1px solid var(--border);border-radius:5px;padding:9px 14px;color:var(--muted);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;transition:all .2s;text-transform:uppercase}
+.quiz-reset-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+.quiz-feedback{font-family:'Space Mono',monospace;font-size:10px;padding:8px 12px;border-radius:4px;display:none;line-height:1.5}
+.quiz-feedback.correct{background:rgba(0,229,150,.1);border:1px solid rgba(0,229,150,.3);color:var(--green);display:block}
+.quiz-feedback.wrong{background:rgba(255,60,90,.08);border:1px solid rgba(255,60,90,.3);color:var(--red);display:block}
+.quiz-status{font-family:'Space Mono',monospace;font-size:9px;padding:5px 10px;border-radius:3px;margin-left:auto}
+.quiz-status.done{background:rgba(0,229,150,.1);color:var(--green);border:1px solid rgba(0,229,150,.3)}
+
+/* ── AVIS SECTION ── */
+.avis-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:14px}
+.avis-form-card{background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:22px;animation:card-in .4s ease}
+.avis-form-title{font-family:'Orbitron',monospace;font-size:13px;color:white;margin-bottom:16px}
+.avis-login-prompt{font-size:13px;color:var(--muted);text-align:center;padding:20px}
+.avis-login-prompt a{color:var(--accent);cursor:pointer;text-decoration:underline}
+.star-row{display:flex;gap:6px;margin-bottom:14px}
+.star-btn{font-size:22px;background:none;border:none;cursor:pointer;transition:transform .15s;line-height:1;color:#444;padding:2px}
+.star-btn:hover,.star-btn.lit{color:var(--gold);transform:scale(1.15)}
+.avis-textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 13px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;resize:vertical;min-height:80px;outline:none;transition:border-color .2s;line-height:1.6}
+.avis-textarea:focus{border-color:var(--accent2)}
+.avis-submit-btn{margin-top:10px;background:linear-gradient(135deg,var(--gold),#b8860b);border:none;border-radius:5px;padding:9px 20px;color:#000;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;font-weight:700;transition:all .2s;text-transform:uppercase}
+.avis-submit-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(255,215,0,.3)}
+.avis-submit-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.avis-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;animation:card-in .4s ease;position:relative}
+.avis-card-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.avis-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:11px;color:white;flex-shrink:0}
+.avis-author{font-family:'Space Mono',monospace;font-size:11px;color:white}
+.avis-stars{color:var(--gold);font-size:14px;letter-spacing:1px}
+.avis-date{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-left:auto}
+.avis-text{font-size:13px;color:var(--text);line-height:1.7}
+.avis-level{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);margin-top:8px;letter-spacing:1px}
+.avis-empty{text-align:center;padding:40px;color:var(--muted);font-size:13px}
+
+/* ── FORMULE CARD ── */
+.formule-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:18px;animation:card-in .5s ease both;position:relative;overflow:hidden}
+.formule-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),transparent)}
+.formule-name{font-family:'Orbitron',monospace;font-size:12px;color:var(--gold);font-weight:700;margin-bottom:7px}
+.formule-syntax{background:var(--code-bg);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:9px 12px;font-family:'Space Mono',monospace;font-size:11px;color:#f7c96a;margin-bottom:9px;overflow-x:auto;white-space:pre}
+.formule-desc{font-size:12px;color:var(--muted);line-height:1.6}
+
+/* ── PROJET CARD ── */
+.projet-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;animation:card-in .5s ease both}
+.projet-header{background:linear-gradient(135deg,rgba(0,100,50,.3),rgba(0,180,100,.1));padding:16px 22px 12px;border-bottom:1px solid var(--border)}
+.projet-level{font-family:'Space Mono',monospace;font-size:8px;letter-spacing:2px;margin-bottom:5px}
+.projet-title{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:white}
+.projet-body{padding:16px 22px}
+.projet-desc{font-size:13px;color:var(--text);line-height:1.7;margin-bottom:12px}
+.projet-skills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px}
+.skill-tag{font-family:'Space Mono',monospace;font-size:8px;padding:2px 7px;border-radius:3px;background:rgba(30,144,255,.1);color:var(--accent3);border:1px solid var(--border2);letter-spacing:1px}
+.projet-steps{padding-left:18px}
+.projet-steps li{font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:3px}
+.projets-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:16px}
+
+/* ── ERREUR CARD ── */
+.erreurs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px}
+.erreur-card{background:var(--surface);border:1px solid rgba(255,60,90,.2);border-radius:8px;padding:18px;animation:card-in .5s ease both}
+.erreur-name{font-family:'Space Mono',monospace;font-size:12px;color:var(--red);font-weight:700;margin-bottom:5px}
+.erreur-bad,.erreur-good{background:var(--code-bg);border-radius:0 5px 5px 0;padding:8px 12px;font-family:'Space Mono',monospace;font-size:10px;line-height:1.7;white-space:pre;overflow-x:auto;margin-bottom:8px}
+.erreur-bad{border-left:3px solid var(--red);color:#ff9090}
+.erreur-good{border-left:3px solid var(--green);color:#90ffb0}
+.erreur-bad .cmt,.erreur-good .cmt{color:var(--muted)}.erreur-bad .kw,.erreur-good .kw{color:var(--accent)}.erreur-bad .fn,.erreur-good .fn{color:var(--teal)}.erreur-bad .str,.erreur-good .str{color:#f7c96a}.erreur-bad .num,.erreur-good .num{color:#ff9d5c}
+.erreur-explication{font-size:12px;color:var(--muted);line-height:1.65}
+
+/* ── APPLICATION CARD ── */
+.app-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:16px}
+.app-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;animation:card-in .5s ease both;transition:transform .3s,box-shadow .3s}
+.app-card:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(30,144,255,.12)}
+.app-header{padding:16px 20px 12px;border-bottom:1px solid var(--border)}
+.app-domaine{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;margin-bottom:5px}
+.app-desc{font-size:12px;color:var(--muted);line-height:1.6}
+.app-body{padding:14px 20px}
+.app-modules{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.app-module-tag{font-family:'Space Mono',monospace;font-size:8px;padding:2px 7px;border-radius:3px;background:rgba(30,144,255,.08);color:var(--accent3);border:1px solid var(--border2);letter-spacing:.5px}
+.app-exemples-title{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px}
+.app-exemples{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.app-ex-tag{font-size:10px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:2px 7px}
+.app-snippet{background:var(--code-bg);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;padding:9px 12px;font-family:'Space Mono',monospace;font-size:10px;color:#80b8e8;line-height:1.8;white-space:pre;overflow-x:auto}
+.app-snippet .cmt{color:var(--muted)}.app-snippet .kw{color:var(--accent);font-weight:bold}.app-snippet .fn{color:var(--teal)}.app-snippet .str{color:#f7c96a}.app-snippet .num{color:#ff9d5c}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:80px 20px;color:var(--muted)}
+.empty-icon{font-size:40px;margin-bottom:14px;opacity:.4}
+
+/* ── FOOTER ── */
+footer{position:relative;z-index:10;margin:0 24px 40px;padding-top:20px;border-top:1px solid var(--border);font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+footer a{color:var(--accent3);text-decoration:none}
+footer a:hover{color:var(--accent)}
+.footer-discord{color:#5865F2!important}
+
+/* ══════════════════════════════════
+   XP ANIMATION
+══════════════════════════════════ */
+.xp-popup{position:fixed;z-index:500;font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,.6);pointer-events:none;animation:xp-float 1.8s ease-out forwards}
+@keyframes xp-float{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-80px) scale(1.3)}}
+
+/* ══════════════════════════════════
+   RESPONSIVE MOBILE
+══════════════════════════════════ */
+@media(max-width:600px){
+  header{padding:50px 16px 32px}
+  main{padding:24px 16px 90px}
+  .search-wrap,.nav-pills{padding-left:16px;padding-right:16px}
+  footer{margin:0 16px 40px}
+  h1{font-size:28px}
+  #memento-clock{right:12px;font-size:9px}
+  #discord-btn .disc-info{display:none}
+  #discord-btn{padding:9px}
+  .auth-box{padding:24px 20px}
+  .ubar-xp-wrap{display:none}
+  .ubar-name{max-width:80px}
+  .pp-stat-row{gap:6px}
+  #profile-panel{width:calc(100vw - 32px)}
+  .cards-grid{grid-template-columns:1fr}
+  .lecons-grid,.quiz-grid,.avis-grid,.exos-grid{grid-template-columns:1fr}
+  .projets-grid,.erreurs-grid,.app-grid{grid-template-columns:1fr}
+}
+
+@media(max-width:900px){
+  #memento-clock{
+    top:8px;right:10px;font-size:9px;
+    background:rgba(2,5,16,.78);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:4px 8px;
+    backdrop-filter:blur(6px);
+  }
+  .search-wrap{
+    top:34px;
+    padding-right:16px;
+  }
+}
+
+/* ══════════════════════════════════════
+   PAGE PROFIL
+══════════════════════════════════════ */
+#profile-page{
+  display:none;position:fixed;inset:0;z-index:450;
+  background:var(--bg);overflow-y:auto;
+}
+#profile-page.open{display:block;animation:pageFadeIn .3s ease}
+@keyframes pageFadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* Profile page top nav */
+.pp-page-nav{
+  position:sticky;top:0;z-index:10;
+  background:rgba(2,5,16,.9);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+  padding:12px 24px;display:flex;align-items:center;gap:14px;
+}
+.pp-back-btn{
+  background:none;border:1px solid var(--border);color:var(--muted);
+  font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1.5px;
+  padding:7px 14px;border-radius:4px;cursor:pointer;transition:all .2s;
+  text-transform:uppercase;
+}
+.pp-back-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+.pp-page-title{font-family:'Orbitron',monospace;font-size:13px;color:var(--muted);letter-spacing:2px}
+
+/* Banner */
+.pp-banner{
+  position:relative;height:280px;overflow:hidden;
+  background:linear-gradient(135deg,#0a1628 0%,#1a3060 50%,#0e1e38 100%);
+  cursor:pointer;
+}
+.pp-banner img{width:100%;height:100%;object-fit:cover;display:block}
+.pp-banner-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(to bottom,transparent 40%,rgba(2,5,16,.9) 100%);
+}
+.pp-banner-edit{
+  position:absolute;top:12px;right:12px;
+  background:rgba(2,5,16,.7);border:1px solid var(--border2);
+  color:var(--muted);font-family:'Space Mono',monospace;font-size:9px;
+  letter-spacing:1px;padding:5px 10px;border-radius:4px;cursor:pointer;
+  transition:all .2s;text-transform:uppercase;
+}
+.pp-banner-edit:hover{border-color:var(--accent2);color:var(--accent2)}
+
+/* Avatar zone */
+.pp-avatar-zone{
+  position:relative;
+  display:flex;align-items:flex-end;gap:18px;
+  padding:0 24px;margin-top:-50px;margin-bottom:20px;
+  flex-wrap:wrap;
+}
+.pp-avatar-wrap{position:relative;flex-shrink:0}
+.pp-avatar-img{
+  width:90px;height:90px;border-radius:50%;
+  border:3px solid var(--bg);
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Orbitron',monospace;font-size:28px;font-weight:900;color:white;
+  overflow:hidden;cursor:pointer;transition:filter .2s;
+  flex-shrink:0;
+}
+.pp-avatar-img:hover{filter:brightness(.7)}
+.pp-avatar-img img{width:100%;height:100%;object-fit:cover}
+.pp-avatar-edit-hint{
+  position:absolute;inset:0;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.5);color:white;font-size:20px;
+  opacity:0;transition:opacity .2s;pointer-events:none;
+}
+.pp-avatar-img:hover .pp-avatar-edit-hint{opacity:1}
+
+/* Profile info */
+.pp-info{flex:1;min-width:200px;padding-top:55px}
+.pp-username{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;color:white;line-height:1.1}
+.pp-class-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  margin-top:6px;padding:4px 12px 4px 8px;border-radius:20px;
+  font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1.5px;
+  text-transform:uppercase;font-weight:700;
+}
+.pp-bio{margin-top:10px;font-size:14px;color:var(--muted);line-height:1.7;max-width:500px}
+.pp-bio-empty{color:var(--border2);font-style:italic}
+
+/* Edit btn */
+.pp-edit-profile-btn{
+  margin-left:auto;align-self:flex-start;margin-top:55px;
+  background:none;border:1px solid var(--border2);color:var(--accent3);
+  font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1.5px;
+  padding:8px 16px;border-radius:5px;cursor:pointer;transition:all .2s;
+  text-transform:uppercase;white-space:nowrap;
+}
+.pp-edit-profile-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(30,144,255,.06)}
+
+/* Stats bar */
+.pp-stats-bar{
+  display:flex;gap:0;border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  overflow-x:auto;
+}
+.pp-stat-item{
+  flex:1;min-width:80px;padding:18px 16px;text-align:center;
+  border-right:1px solid var(--border);
+}
+.pp-stat-item:last-child{border-right:none}
+.pp-stat-val{font-family:'Orbitron',monospace;font-size:20px;font-weight:700;color:var(--accent2)}
+.pp-stat-label{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:3px}
+
+/* XP Progress section */
+.pp-xp-section{padding:24px}
+.pp-section-title{font-family:'Orbitron',monospace;font-size:12px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px}
+.pp-level-road{display:flex;flex-direction:column;gap:10px}
+.pp-level-item{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 16px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface);transition:all .3s;
+}
+.pp-level-item.current{border-color:var(--accent);background:rgba(30,144,255,.08)}
+.pp-level-item.done{border-color:rgba(0,229,150,.3);background:rgba(0,229,150,.04)}
+.pp-level-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.pp-level-name{font-family:'Orbitron',monospace;font-size:11px;flex:1}
+.pp-level-range{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted)}
+.pp-level-check{font-size:14px}
+.pp-level-bar-wrap{margin-top:8px}
+.pp-level-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.pp-level-fill{height:100%;border-radius:4px;transition:width .8s ease}
+
+/* Achievements / badges */
+.pp-badges-section{padding:0 24px 24px}
+.pp-badges-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.pp-badge-item{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:14px;text-align:center;
+  transition:all .3s;
+}
+.pp-badge-item.earned{border-color:var(--gold);background:rgba(255,215,0,.06)}
+.pp-badge-item.locked{opacity:.4;filter:grayscale(1)}
+.pp-badge-icon{font-size:28px;margin-bottom:6px}
+.pp-badge-name{font-family:'Space Mono',monospace;font-size:9px;color:var(--text);letter-spacing:.5px}
+.pp-badge-desc{font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4}
+
+/* Edit modal */
+.pp-edit-modal{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(2,5,16,.88);backdrop-filter:blur(14px);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.pp-edit-modal.hidden{display:none}
+.pp-edit-box{
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:14px;padding:28px;width:100%;max-width:440px;
+  position:relative;
+}
+.pp-edit-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:14px 14px 0 0}
+.pp-edit-title{font-family:'Orbitron',monospace;font-size:15px;color:white;margin-bottom:20px}
+.pp-edit-field{margin-bottom:14px}
+.pp-edit-field label{display:block;font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.pp-edit-field input,.pp-edit-field textarea{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:6px;padding:10px 13px;color:var(--text);
+  font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;
+  transition:border-color .2s;
+}
+.pp-edit-field textarea{resize:vertical;min-height:70px;line-height:1.6}
+.pp-edit-field input:focus,.pp-edit-field textarea:focus{border-color:var(--accent)}
+.pp-edit-field .hint{font-size:10px;color:var(--muted);margin-top:4px}
+.pp-edit-actions{display:flex;gap:8px;margin-top:18px}
+.pp-save-btn{
+  flex:1;background:linear-gradient(135deg,var(--accent),#1570cc);
+  border:none;border-radius:6px;padding:11px;color:white;
+  font-family:'Orbitron',monospace;font-size:11px;font-weight:700;
+  letter-spacing:1.5px;cursor:pointer;transition:all .2s;
+}
+.pp-save-btn:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(30,144,255,.4)}
+.pp-cancel-btn{
+  background:none;border:1px solid var(--border);color:var(--muted);
+  font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;
+  padding:11px 18px;border-radius:6px;cursor:pointer;transition:all .2s;
+}
+.pp-cancel-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+
+/* Image input hidden */
+#banner-input,#avatar-input{display:none}
+
+/* Top nav tab for profile */
+.main-nav-tab{
+  position:fixed;top:8px;left:50%;transform:translateX(-50%);
+  z-index:200;display:flex;align-items:center;gap:0;
+  background:rgba(10,22,40,.85);border:1px solid var(--border2);
+  border-radius:8px;overflow:hidden;backdrop-filter:blur(8px);
+}
+.main-nav-btn{
+  font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1.5px;
+  text-transform:uppercase;padding:8px 16px;background:none;border:none;
+  color:var(--muted);cursor:pointer;transition:all .2s;white-space:nowrap;
+  border-right:1px solid var(--border);
+}
+.main-nav-btn:last-child{border-right:none}
+.main-nav-btn:hover{background:rgba(30,144,255,.08);color:var(--accent2)}
+.main-nav-btn.active{background:var(--accent);color:white}
+
+@media(max-width:600px){
+  .main-nav-tab{left:56px;transform:none;max-width:calc(100vw - 72px);overflow-x:auto}
+  .pp-avatar-zone{margin-top:-40px;padding:0 16px}
+  .pp-avatar-img{width:72px;height:72px;font-size:22px}
+  .pp-info{padding-top:46px}
+  .pp-username{font-size:18px}
+  .pp-edit-profile-btn{margin-top:46px}
+  .pp-xp-section,.pp-badges-section{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<div id="progress-bar" style="width:0%"></div>
+<canvas id="bg-canvas"></canvas>
+<div id="persona-bg"></div>
+<div id="memento-clock">MEMENTO MORI · <span id="clock-time">00:00:00</span></div>
+<div id="toast"></div>
+
+<!-- TOP NAV TABS -->
+<div class="main-nav-tab" id="main-nav">
+  <button class="main-nav-btn active" data-page="home" onclick="showPage('home')">🏠 Accueil</button>
+  <button class="main-nav-btn" data-page="profile" onclick="showPage('profile')">👤 Profil</button>
+</div>
+
+<!-- AUTH OVERLAY -->
+<div id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">Python<span>Dico</span></div>
+    <div class="auth-sub">// Memento Mori Edition · by Ace</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Connexion</button>
+      <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Créer un compte</button>
+    </div>
+    <div id="auth-form">
+      <div class="auth-field">
+        <label>Identifiant</label>
+        <input id="auth-id" type="text" placeholder="ton_pseudo" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="auth-field">
+        <label>Mot de passe <span style="color:var(--muted);font-size:8px">(6 caractères min)</span></label>
+        <input id="auth-pw" type="password" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <button class="auth-btn" id="auth-submit-btn" onclick="handleAuth()">SE CONNECTER</button>
+      <div class="auth-error" id="auth-error"></div>
+    </div>
+    <span class="auth-skip" onclick="skipAuth()">Continuer sans compte →</span>
+  </div>
+</div>
+
+<!-- USER BAR (logged in) -->
+<div id="user-bar" class="hidden" onclick="showPage('profile')" style="position:fixed;top:10px;right:120px;z-index:400;cursor:pointer">
+  <div class="ubar-avatar" id="ubar-avatar">A</div>
+  <div class="ubar-info">
+    <div class="ubar-name" id="ubar-name">Utilisateur</div>
+    <div class="ubar-level" id="ubar-level">Débutant</div>
+  </div>
+  <div class="ubar-xp-wrap">
+    <div class="ubar-xp-bar"><div class="ubar-xp-fill" id="ubar-xp-fill" style="width:0%"></div></div>
+    <div class="ubar-xp-text" id="ubar-xp-text">0 XP</div>
+  </div>
+</div>
+
+<!-- DISCORD -->
+<a id="discord-btn" href="https://discord.gg/personafr" target="_blank" rel="noopener">
+  <svg viewBox="0 0 24 24" fill="white"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.001.022.015.04.037.05A19.9 19.9 0 0 0 6.1 20.507a.077.077 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.025.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+  <div class="disc-info"><span class="disc-label">Rejoins</span><span class="disc-name">Persona FR</span></div>
+</a>
+
+<!-- ════════════════════════════
+     HOME PAGE
+════════════════════════════ -->
+<div id="home-page">
+<header>
+  <div class="header-glow"></div>
+  <div class="memento-tag">// python · débutant → avancé · by Ace</div>
+  <h1><span class="py">Python</span><br><span class="dico">Dictionnaire Complet</span></h1>
+  <p class="subtitle">Des bases à la POO — définitions, leçons, formules, exercices interactifs et projets guidés.</p>
+  <div class="stats-row">
+    <span class="stat-chip" id="stat-terms">— entrées</span>
+    <span class="stat-chip">18 catégories</span>
+    <span class="stat-chip">// wz6d</span>
+    <span class="stat-chip">// by Ace</span>
+  </div>
+</header>
+<div class="search-wrap">
+  <div class="search-inner">
+    <span class="search-icon">⌕</span>
+    <input id="search" type="text" placeholder="Rechercher... ex: return, liste, classe..." autocomplete="off" spellcheck="false">
+    <button id="clear-btn" title="Effacer">✕</button>
+  </div>
+  <span id="search-count"></span>
+</div>
+<div style="display:flex;gap:8px;padding:0 16px;margin-bottom:8px;flex-wrap:wrap"><button onclick="showMembres()" style="background:linear-gradient(135deg,rgba(255,215,0,.15),rgba(255,215,0,.05));border:1px solid rgba(255,215,0,.3);border-radius:8px;padding:7px 14px;color:var(--gold);font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1px;cursor:pointer">🏆 CLASSEMENT</button><button id="admin-btn" onclick="openAdminPanel()" style="display:none;background:linear-gradient(135deg,rgba(255,60,90,.15),rgba(255,60,90,.05));border:1px solid rgba(255,60,90,.3);border-radius:8px;padding:7px 14px;color:var(--red);font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1px;cursor:pointer">⚙️ ADMIN</button></div><div class="nav-pills">
+  <button class="pill active" data-filter="all">Tout</button>
+  <button class="pill" data-filter="bases">🔵 Bases</button>
+  <button class="pill" data-filter="fonctions">🟢 Fonctions</button>
+  <button class="pill" data-filter="boucles">🟡 Boucles</button>
+  <button class="pill" data-filter="conditions">🔴 Conditions</button>
+  <button class="pill" data-filter="structures">🔷 Structures</button>
+  <button class="pill" data-filter="classes">🟣 Classes</button>
+  <button class="pill" data-filter="builtin">⚡ Built-in</button>
+  <button class="pill pill-gold" data-filter="formules">📐 Formules</button>
+  <button class="pill pill-gold" data-filter="lecons">📖 Leçons</button>
+  <button class="pill pill-green" data-filter="projets">🚀 Projets</button>
+  <button class="pill pill-green" data-filter="quiz">🎮 Quiz XP</button>
+  <button class="pill pill-red" data-filter="erreurs">🐛 Erreurs</button>
+  <button class="pill" data-filter="strings">📝 Strings</button>
+  <button class="pill" data-filter="fichiers">📁 Fichiers</button>
+  <button class="pill" data-filter="cheatsheet">⚡ Cheatsheet</button>
+  <button class="pill" data-filter="applications">🌐 Applications</button>
+  <button class="pill pill-gold" data-filter="avis">⭐ Avis</button>
+</div>
+<main id="main"></main>
+<footer>
+  <span>Python Dictionnaire · Memento Mori Edition</span> ·
+  <span>by <strong style="color:var(--accent2)">Ace</strong> · <strong style="color:#5865F2">wz6d</strong></span> ·
+  <a href="https://discord.gg/personafr" target="_blank" style="color:#5865F2">discord.gg/personafr</a> ·
+  <span id="footer-count">Chargement…</span>
+</footer>
+</div>
+
+<!-- ════════════════════════════
+     PROFILE PAGE
+════════════════════════════ -->
+<div id="profile-page">
+  <!-- Top nav -->
+  <div class="pp-page-nav">
+    <button class="pp-back-btn" onclick="showPage('home')">← Retour</button>
+    <span class="pp-page-title">PROFIL</span>
+    <button class="pp-back-btn" onclick="logout()" style="margin-left:auto;border-color:rgba(255,60,90,.3);color:var(--red)">Déconnexion</button>
+  </div>
+
+  <!-- Guest state -->
+  <div id="pp-guest" style="text-align:center;padding:80px 24px;display:none">
+    <div style="font-size:48px;margin-bottom:16px">👤</div>
+    <div style="font-family:'Orbitron',monospace;font-size:18px;color:white;margin-bottom:8px">Pas encore connecté</div>
+    <div style="color:var(--muted);font-size:14px;margin-bottom:24px">Connecte-toi pour accéder à ton profil, ton XP et tes badges.</div>
+    <button onclick="document.getElementById('auth-overlay').classList.remove('hidden')" style="background:linear-gradient(135deg,var(--accent),#1570cc);border:none;border-radius:8px;padding:13px 28px;color:white;font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:2px;cursor:pointer">SE CONNECTER</button>
+  </div>
+
+  <!-- Logged in state -->
+  <div id="pp-logged">
+    <!-- Banner -->
+    <div class="pp-banner" id="pp-banner" onclick="document.getElementById('banner-input').click()">
+      <img id="pp-banner-img" src="" style="display:none" alt="bannière">
+      <div class="pp-banner-overlay"></div>
+      <div class="pp-banner-edit">✏️ Changer la bannière</div>
+    </div>
+    <input type="file" id="banner-input" accept="image/*" onchange="handleBannerUpload(event)">
+    <input type="file" id="avatar-input" accept="image/*" onchange="handleAvatarUpload(event)">
+
+    <!-- Avatar + info -->
+    <div class="pp-avatar-zone">
+      <div class="pp-avatar-wrap">
+        <div class="pp-avatar-img" id="pp-avatar-big" onclick="document.getElementById('avatar-input').click()">
+          <span id="pp-avatar-letter">A</span>
+          <div class="pp-avatar-edit-hint">📷</div>
+        </div>
+      </div>
+      <div class="pp-info">
+        <div class="pp-username" id="pp-username">Utilisateur</div>
+        <div class="pp-class-badge" id="pp-class-badge">
+          <span id="pp-class-dot" style="width:8px;height:8px;border-radius:50%;background:#4a6a9a;flex-shrink:0"></span>
+          <span id="pp-class-name">Débutant</span>
+        </div>
+        <div class="pp-bio" id="pp-bio"><span class="pp-bio-empty">Aucune bio — clique sur Modifier pour en ajouter une</span></div>
+      </div>
+      <button class="pp-edit-profile-btn" onclick="openEditModal()">✏️ Modifier le profil</button>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="pp-stats-bar">
+      <div class="pp-stat-item"><div class="pp-stat-val" id="pp-xp-stat">0</div><div class="pp-stat-label">XP Total</div></div>
+      <div class="pp-stat-item"><div class="pp-stat-val" id="pp-done-stat">0</div><div class="pp-stat-label">Quiz réussis</div></div>
+      <div class="pp-stat-item"><div class="pp-stat-val" id="pp-streak-stat">0</div><div class="pp-stat-label">Série 🔥</div></div>
+      <div class="pp-stat-item"><div class="pp-stat-val" id="pp-rank-stat">#—</div><div class="pp-stat-label">Classement</div></div>
+    </div>
+
+    <!-- XP Road -->
+    <div class="pp-xp-section">
+      <div class="pp-section-title">Progression XP</div>
+      <div class="pp-level-road" id="pp-level-road"></div>
+    </div>
+
+    <!-- Badges -->
+    <div class="pp-badges-section">
+      <div class="pp-section-title">Badges</div>
+      <div class="pp-badges-grid" id="pp-badges-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="pp-edit-modal hidden" id="pp-edit-modal">
+  <div class="pp-edit-box">
+    <div class="pp-edit-title">Modifier le profil</div>
+    <div class="pp-edit-field">
+      <label>Pseudo</label>
+      <input id="edit-username" type="text" placeholder="ton_pseudo" maxlength="24" autocomplete="off">
+      <div class="hint">Entre 3 et 24 caractères, sans espaces</div>
+    </div>
+    <div class="pp-edit-field">
+      <label>Bio</label>
+      <textarea id="edit-bio" placeholder="Parle un peu de toi... (max 160 caractères)" maxlength="160"></textarea>
+    </div>
+    <div class="pp-edit-actions">
+      <button class="pp-save-btn" onclick="saveProfile()">SAUVEGARDER</button>
+      <button class="pp-cancel-btn" onclick="closeEditModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   SUPABASE — remplace par tes vraies valeurs
+══════════════════════════════════════════════════════ */
+const SUPABASE_URL = 'https://hxfvsdxzkmsgvvqnenef.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4ZnZzZHh6a21zZ3Z2cW5lbmVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMTczNjAsImV4cCI6MjA5MTY5MzM2MH0.oV2KjuBgk6we0PUqycwMGU5L6c50iiA3FqkAXnJoIWM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* Admin owner config */
+const OWNER_ADMIN_USERNAME = '';
+const OWNER_ADMIN_EMAIL = '';
+const OWNER_ADMIN_USER_ID = '0f4ca697-057b-49b5-b4ce-68640e2e15e5';
+
+/* ══ LEVELS ══ */
+const LEVELS = [
+  {name:'Débutant',     min:0,    max:500,   color:'#4a6a9a', icon:'🌱'},
+  {name:'Apprenti',     min:500,  max:1200,  color:'#00e596', icon:'📗'},
+  {name:'Initié',       min:1200, max:2500,  color:'#1e90ff', icon:'💧'},
+  {name:'Confirmé',     min:2500, max:4500,  color:'#a864ff', icon:'⚡'},
+  {name:'Avancé',       min:4500, max:7500,  color:'#ffd700', icon:'🌟'},
+  {name:'Expert',       min:7500, max:12000, color:'#ff8c00', icon:'🔥'},
+  {name:'Maître Python',min:12000,max:99999, color:'#ff3c5a', icon:'🐍'},
+];
+const BADGES = [
+  {id:'first_quiz',  icon:'🎯', name:'Premier Quiz',   desc:'Réussis ton 1er quiz',      cond:p=>p.exercises_done>=1},
+  {id:'quiz10',      icon:'🔟', name:'Série de 10',    desc:'10 quiz réussis',            cond:p=>p.exercises_done>=10},
+  {id:'quiz50',      icon:'💯', name:'Centurion',      desc:'50 quiz réussis',            cond:p=>p.exercises_done>=50},
+  {id:'xp500',       icon:'⚡', name:'Apprenti',       desc:'500 XP atteints',            cond:p=>p.xp>=500},
+  {id:'xp1200',      icon:'💧', name:'Initié',         desc:'1200 XP atteints',           cond:p=>p.xp>=1200},
+  {id:'xp2500',      icon:'🌟', name:'Confirmé',       desc:'2500 XP atteints',           cond:p=>p.xp>=2500},
+  {id:'xp7500',      icon:'🔥', name:'Expert',         desc:'7500 XP atteints',           cond:p=>p.xp>=7500},
+  {id:'avis',        icon:'⭐', name:'Critique',       desc:'Laisser un avis',            cond:p=>p.has_review},
+  {id:'streak3',     icon:'🔥', name:'En feu',         desc:'3 jours consécutifs',        cond:p=>p.streak>=3},
+];
+
+function getLevel(xp){return LEVELS.find(l=>xp>=l.min&&xp<l.max)||LEVELS[LEVELS.length-1];}
+function getLevelPct(xp){const l=getLevel(xp);return Math.min(100,Math.round((xp-l.min)/(l.max-l.min)*100));}
+
+/* ══ STATE ══ */
+let currentUser=null, userProfile=null, authMode='login', avisData=[], avisRating=0;
+
+/* ══════════════════════════════════
+   PAGE NAVIGATION
+══════════════════════════════════ */
+function showPage(page){
+  document.getElementById('home-page').style.display = page==='home'?'block':'none';
+  const profilePage = document.getElementById('profile-page');
+  profilePage.classList.toggle('open', page==='profile');
+  document.querySelectorAll('.main-nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.page===page));
+  if(page==='profile') renderProfilePage();const adminBtn=document.getElementById('admin-btn');if(adminBtn)adminBtn.style.display=isAdmin()?'block':'none';
+}
+
+/* ══════════════════════════════════
+   AUTH — FIX COMPLET
+   Utilise email réel OU génère un email
+   valide avec un hash pour éviter les
+   collisions sur Supabase
+══════════════════════════════════ */
+function switchAuthTab(mode){
+  authMode=mode;
+  document.getElementById('tab-login').classList.toggle('active',mode==='login');
+  document.getElementById('tab-register').classList.toggle('active',mode==='register');
+  document.getElementById('auth-submit-btn').textContent=mode==='login'?'SE CONNECTER':'CRÉER MON COMPTE';
+  document.getElementById('auth-error').textContent='';
+}
+
+/* Génère un email valide depuis un pseudo — STABLE et reproductible */
+function pseudoToEmail(pseudo){
+  // Simple hash pour avoir un email stable par pseudo
+  let hash=0;
+  for(let i=0;i<pseudo.length;i++){hash=((hash<<5)-hash)+pseudo.charCodeAt(i);hash|=0;}
+  const h=Math.abs(hash).toString(36);
+  return `${pseudo.toLowerCase().replace(/[^a-z0-9]/g,'')}${h}@pythondico.app`;
+}
+
+async function handleAuth(){
+  const rawId=document.getElementById('auth-id').value.trim();
+  const idLower=rawId.toLowerCase();
+  const isEmailLogin=idLower.includes('@');
+  const username=isEmailLogin?idLower.split('@')[0].replace(/[^a-z0-9._-]/g,'').slice(0,24):rawId;
+  const pw=document.getElementById('auth-pw').value;
+  const btn=document.getElementById('auth-submit-btn');
+  const err=document.getElementById('auth-error');
+
+  // Validations
+  if(!rawId){err.textContent='Entre un identifiant ou email.';return;}
+  if(!isEmailLogin&&username.length<3){err.textContent='Identifiant trop court (3 caractères minimum).';return;}
+  if(isEmailLogin&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(idLower)){err.textContent='Email invalide.';return;}
+  if(!pw){err.textContent='Entre un mot de passe.';return;}
+  if(pw.length<6){err.textContent='Mot de passe trop court (6 caractères minimum).';return;}
+  if(!isEmailLogin&&/\s/.test(rawId)){err.textContent="Pas d'espaces dans l'identifiant.";return;}
+
+  btn.disabled=true;
+  err.textContent='';
+  err.style.color='var(--muted)';
+  err.textContent='Chargement…';
+
+  const email=isEmailLogin?idLower:pseudoToEmail(username);
+
+  try{
+    if(authMode==='register'){
+      // 1. Vérifie si le pseudo existe déjà
+      const {data:existing}=await sb.from('profiles').select('username').eq('username',username).maybeSingle();
+      if(existing){err.style.color='var(--red)';err.textContent='Ce pseudo est déjà pris. Choisis-en un autre.';btn.disabled=false;return;}
+
+      // 2. Crée le compte auth
+      const {data,error}=await sb.auth.signUp({email,password:pw,options:{data:{username}}});
+      if(error){
+        if(error.message.includes('already registered')){
+          // L'email existe → try login instead (pseudo déjà pris par quelqu'un)
+          err.style.color='var(--red)';
+          err.textContent='Ce pseudo est déjà pris. Choisis-en un autre.';
+        } else {
+          err.style.color='var(--red)';
+          err.textContent='Erreur création : '+error.message;
+        }
+        btn.disabled=false;return;
+      }
+
+      // 3. Crée le profil
+      if(data.user){
+        await sb.from('profiles').upsert({
+          id:data.user.id, username, xp:0,
+          exercises_done:0, streak:0, bio:'',
+          avatar_url:null, banner_url:null
+        });
+        err.style.color='var(--green)';
+        err.textContent='✅ Compte créé !';
+        setTimeout(async()=>{
+          await loadProfile(data.user);
+          hideAuthOverlay();
+        },600);
+      }
+
+    } else {
+      // LOGIN
+      const {data,error}=await sb.auth.signInWithPassword({email,password:pw});
+      if(error){
+        err.style.color='var(--red)';
+        err.textContent='Identifiant ou mot de passe incorrect.';
+        btn.disabled=false;return;
+      }
+      err.style.color='var(--green)';
+      err.textContent='✅ Connexion réussie !';
+      setTimeout(async()=>{
+        await loadProfile(data.user);
+        hideAuthOverlay();
+      },400);
+    }
+  } catch(e){
+    err.style.color='var(--red)';
+    err.textContent='Erreur réseau : '+e.message;
+    btn.disabled=false;
+  }
+}
+
+async function loadProfile(user){
+  currentUser=user;
+  let {data:profile}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();
+  if(!profile){
+    const username=user.user_metadata?.username||user.email.split('@')[0].replace(/[0-9a-z]{4,}$/,'');
+    const {data:np}=await sb.from('profiles').upsert({
+      id:user.id, username, xp:0, exercises_done:0, streak:0, bio:''
+    }).select().single();
+    profile=np||{username,xp:0,exercises_done:0,streak:0,bio:''};
+  }
+  if(profile?.banned){
+    await sb.auth.signOut();
+    currentUser=null;
+    userProfile=null;
+    document.getElementById('user-bar').classList.add('hidden');
+    document.getElementById('auth-overlay').classList.remove('hidden');
+    showToast('⛔ Compte banni');
+    return;
+  }
+  userProfile=profile;
+  updateUserBar();
+  // Load rank
+  loadRank();
+  const adminBtn=document.getElementById('admin-btn');if(adminBtn)adminBtn.style.display=isAdmin()?'block':'none';
+}
+
+async function loadRank(){
+  if(!userProfile)return;
+  const {count}=await sb.from('profiles').select('*',{count:'exact',head:true}).gt('xp',userProfile.xp);
+  userProfile._rank=(count||0)+1;
+  document.getElementById('pp-rank-stat').textContent='#'+userProfile._rank;
+}
+
+function updateUserBar(){
+  if(!userProfile)return;
+  const lv=getLevel(userProfile.xp);
+  const pct=getLevelPct(userProfile.xp);
+  document.getElementById('user-bar').classList.remove('hidden');
+  document.getElementById('ubar-name').textContent=userProfile.username;
+  document.getElementById('ubar-level').textContent=lv.name.toUpperCase();
+  document.getElementById('ubar-avatar').textContent=(userProfile.username||'?')[0].toUpperCase();
+  document.getElementById('ubar-xp-fill').style.width=pct+'%';
+  document.getElementById('ubar-xp-text').textContent=userProfile.xp+' XP';
+}
+
+function renderProfilePage(){
+  if(!currentUser){
+    document.getElementById('pp-guest').style.display='block';
+    document.getElementById('pp-logged').style.display='none';
+    return;
+  }
+  document.getElementById('pp-guest').style.display='none';
+  document.getElementById('pp-logged').style.display='block';
+  if(!userProfile)return;
+
+  const lv=getLevel(userProfile.xp);
+  const pct=getLevelPct(userProfile.xp);
+
+  // Avatar / banner
+  const avatarBig=document.getElementById('pp-avatar-big');
+  if(userProfile.avatar_url){
+    avatarBig.innerHTML=`<img src="${userProfile.avatar_url}" alt="avatar"><div class="pp-avatar-edit-hint">📷</div>`;
+  } else {
+    avatarBig.innerHTML=`<span id="pp-avatar-letter">${(userProfile.username||'?')[0].toUpperCase()}</span><div class="pp-avatar-edit-hint">📷</div>`;
+  }
+  const bannerImg=document.getElementById('pp-banner-img');
+  if(userProfile.banner_url){bannerImg.src=userProfile.banner_url;bannerImg.style.display='block';}
+  else {bannerImg.style.display='none';}
+
+  // Banner gradient based on level
+  document.getElementById('pp-banner').style.background=`linear-gradient(135deg, #0a1628, ${lv.color}33, #0e1e38)`;
+
+  // Info
+  document.getElementById('pp-username').textContent=userProfile.username||'Utilisateur';
+  const classBadge=document.getElementById('pp-class-badge');
+  classBadge.style.background=lv.color+'22';
+  classBadge.style.border=`1px solid ${lv.color}44`;
+  classBadge.style.color=lv.color;
+  document.getElementById('pp-class-dot').style.background=lv.color;
+  document.getElementById('pp-class-name').textContent=lv.icon+' '+lv.name;
+  const bioEl=document.getElementById('pp-bio');
+  bioEl.innerHTML=userProfile.bio?userProfile.bio.replace(/\n/g,'<br>'):'<span class="pp-bio-empty">Aucune bio — clique sur Modifier pour en ajouter une</span>';
+
+  // Stats
+  document.getElementById('pp-xp-stat').textContent=userProfile.xp||0;
+  document.getElementById('pp-done-stat').textContent=userProfile.exercises_done||0;
+  document.getElementById('pp-streak-stat').textContent=userProfile.streak||0;
+  if(userProfile._rank)document.getElementById('pp-rank-stat').textContent='#'+userProfile._rank;
+
+  // XP Road
+  const road=document.getElementById('pp-level-road');
+  road.innerHTML=LEVELS.map(l=>{
+    const isDone=userProfile.xp>=l.max;
+    const isCurrent=userProfile.xp>=l.min&&userProfile.xp<l.max;
+    const levelPct=isCurrent?Math.round((userProfile.xp-l.min)/(l.max-l.min)*100):isDone?100:0;
+    return `<div class="pp-level-item ${isDone?'done':isCurrent?'current':''}">
+      <div class="pp-level-dot" style="background:${l.color}"></div>
+      <div class="pp-level-name" style="color:${isDone||isCurrent?l.color:'var(--muted)'}">${l.icon} ${l.name}</div>
+      <div class="pp-level-range">${l.min} – ${l.max<99999?l.max:'∞'} XP</div>
+      <div class="pp-level-check">${isDone?'✅':isCurrent?'👈':'🔒'}</div>
+      ${isCurrent?`<div class="pp-level-bar-wrap" style="width:100%;grid-column:1/-1;margin-top:-6px">
+        <div class="pp-level-bar"><div class="pp-level-fill" style="width:${levelPct}%;background:${l.color}"></div></div>
+        <div style="font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);margin-top:3px">${userProfile.xp} / ${l.max} XP · ${levelPct}%</div>
+      </div>`:''}</div>`;
+  }).join('');
+
+  // Badges
+  const badgesGrid=document.getElementById('pp-badges-grid');
+  badgesGrid.innerHTML=BADGES.map(b=>{
+    const earned=b.cond(userProfile);
+    return `<div class="pp-badge-item ${earned?'earned':'locked'}">
+      <div class="pp-badge-icon">${b.icon}</div>
+      <div class="pp-badge-name">${b.name}</div>
+      <div class="pp-badge-desc">${b.desc}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ══ EDIT PROFILE ══ */
+function openEditModal(){
+  if(!userProfile)return;
+  document.getElementById('edit-username').value=userProfile.username||'';
+  document.getElementById('edit-bio').value=userProfile.bio||'';
+  document.getElementById('pp-edit-modal').classList.remove('hidden');
+}
+function closeEditModal(){document.getElementById('pp-edit-modal').classList.add('hidden');}
+
+async function saveProfile(){
+  const newUsername=document.getElementById('edit-username').value.trim();
+  const newBio=document.getElementById('edit-bio').value.trim();
+  if(!newUsername||newUsername.length<3){showToast('Pseudo trop court');return;}
+  if(/\s/.test(newUsername)){showToast("Pas d'espaces dans le pseudo");return;}
+
+  // Check username availability if changed
+  if(newUsername!==userProfile.username){
+    const {data:ex}=await sb.from('profiles').select('username').eq('username',newUsername).maybeSingle();
+    if(ex){showToast('Ce pseudo est déjà pris');return;}
+  }
+
+  const {error}=await sb.from('profiles').update({username:newUsername,bio:newBio}).eq('id',currentUser.id);
+  if(error){showToast('Erreur : '+error.message);return;}
+  userProfile.username=newUsername;
+  userProfile.bio=newBio;
+  updateUserBar();
+  renderProfilePage();
+  closeEditModal();
+  showToast('✅ Profil mis à jour !');
+}
+
+/* ══ AVATAR / BANNER UPLOAD ══ */
+async function handleAvatarUpload(e){
+  const file=e.target.files[0];
+  if(!file||!currentUser)return;
+  if(file.size>2*1024*1024){showToast('Image trop lourde (max 2 Mo)');return;}
+  showToast('Upload en cours…');
+  const ext=file.name.split('.').pop();
+  const path=`avatars/${currentUser.id}.${ext}`;
+  const {error:upErr}=await sb.storage.from('profiles').upload(path,file,{upsert:true});
+  if(upErr){showToast('Erreur upload : '+upErr.message);return;}
+  const {data}=sb.storage.from('profiles').getPublicUrl(path);
+  await sb.from('profiles').update({avatar_url:data.publicUrl}).eq('id',currentUser.id);
+  userProfile.avatar_url=data.publicUrl+'?t='+Date.now();
+  renderProfilePage();
+  showToast('✅ Photo de profil mise à jour !');
+}
+
+async function handleBannerUpload(e){
+  const file=e.target.files[0];
+  if(!file||!currentUser)return;
+  if(file.size>5*1024*1024){showToast('Image trop lourde (max 5 Mo)');return;}
+  showToast('Upload en cours…');
+  const ext=file.name.split('.').pop();
+  const path=`banners/${currentUser.id}.${ext}`;
+  const {error:upErr}=await sb.storage.from('profiles').upload(path,file,{upsert:true});
+  if(upErr){showToast('Erreur upload : '+upErr.message);return;}
+  const {data}=sb.storage.from('profiles').getPublicUrl(path);
+  await sb.from('profiles').update({banner_url:data.publicUrl}).eq('id',currentUser.id);
+  userProfile.banner_url=data.publicUrl+'?t='+Date.now();
+  renderProfilePage();
+  showToast('✅ Bannière mise à jour !');
+}
+
+/* ══ XP ══ */
+async function awardXP(amount,label){
+  if(!currentUser||!userProfile)return;
+  const oldLevel=getLevel(userProfile.xp).name;
+  userProfile.xp+=amount;
+  userProfile.exercises_done=(userProfile.exercises_done||0)+1;
+  await sb.from('profiles').update({xp:userProfile.xp,exercises_done:userProfile.exercises_done}).eq('id',currentUser.id);
+  updateUserBar();
+  showToast(`+${amount} XP — ${label}`,'xp');
+  spawnXPPopup(amount);
+  const newLevel=getLevel(userProfile.xp).name;
+  if(newLevel!==oldLevel){
+    setTimeout(()=>showToast(`🎉 Niveau supérieur ! Tu es maintenant ${newLevel} !`,'xp'),1200);
+  }
+}
+
+function spawnXPPopup(amount){
+  const el=document.createElement('div');
+  el.className='xp-popup';
+  el.textContent='+'+amount+' XP';
+  el.style.cssText=`left:${80+Math.random()*80}px;bottom:${100+Math.random()*50}px;position:fixed;z-index:500`;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1900);
+}
+
+/* ══ AUTH HELPERS ══ */
+function hideAuthOverlay(){document.getElementById('auth-overlay').classList.add('hidden');}
+function skipAuth(){hideAuthOverlay();showToast('// Mode visiteur — connecte-toi pour sauvegarder');}
+async function logout(){
+  await sb.auth.signOut();
+  currentUser=null;userProfile=null;
+  document.getElementById('user-bar').classList.add('hidden');
+  document.getElementById('auth-overlay').classList.remove('hidden');
+  showPage('home');
+}
+
+/* Session check */
+(async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){await loadProfile(session.user);hideAuthOverlay();}
+})();
+
+/* ══ AVIS ══ */
+let avisRating2=0;
+function setStars(n){
+  avisRating2=n;
+  document.querySelectorAll('.star-btn').forEach((s,i)=>s.classList.toggle('lit',i<n));
+}
+async function loadAvis(){
+  const {data}=await sb.from('avis').select('*').order('created_at',{ascending:false}).limit(50);
+  avisData=data||[];
+  renderAll(currentFilter,currentQuery);
+}
+async function submitAvis(){
+  if(!currentUser){showToast('Connecte-toi pour laisser un avis !');return;}
+  if(!avisRating2){showToast('Sélectionne une note ⭐');return;}
+  const txt=document.getElementById('avis-text')?.value.trim();
+  if(!txt||txt.length<10){showToast('Écris au moins 10 caractères');return;}
+  const btn=document.querySelector('.avis-submit-btn');
+  if(btn)btn.disabled=true;
+  await sb.from('avis').insert({user_id:currentUser.id,username:userProfile.username,rating:avisRating2,text:txt,xp_at_time:userProfile.xp});
+  showToast('✅ Avis envoyé !');
+  setStars(0);
+  if(document.getElementById('avis-text'))document.getElementById('avis-text').value='';
+  await loadAvis();
+  if(btn)btn.disabled=false;
+}
+
+/* ══ QUIZ HANDLERS ══ */
+function handleMCQ(card,optEl,isCorrect,xp,explanation){
+  if(card.dataset.done)return;
+  card.dataset.done='1';
+  card.querySelectorAll('.mcq-opt').forEach(o=>{o.disabled=true;if(o.dataset.correct==='1')o.classList.add('correct');});
+  if(!isCorrect)optEl.classList.add('wrong');
+  const fb=card.querySelector('.quiz-feedback');
+  fb.textContent=isCorrect?'✅ Correct ! '+explanation:'❌ '+explanation;
+  fb.className='quiz-feedback '+(isCorrect?'correct':'wrong');
+  const st=card.querySelector('.quiz-status');
+  if(st){st.textContent=isCorrect?'✅ Réussi':'❌ Raté';st.className='quiz-status done';}
+  if(isCorrect)awardXP(xp,'QCM réussi');
+}
+function handleTF(card,chosen,correct,xp,explanation){
+  if(card.dataset.done)return;
+  card.dataset.done='1';
+  card.querySelectorAll('.tf-btn').forEach(b=>b.disabled=true);
+  const isCorrect=chosen===correct;
+  card.querySelector(`.tf-btn[data-val="${correct}"]`).classList.add('correct');
+  if(!isCorrect)card.querySelector(`.tf-btn[data-val="${chosen}"]`).classList.add('wrong');
+  const fb=card.querySelector('.quiz-feedback');
+  fb.textContent=isCorrect?'✅ Exact ! '+explanation:'❌ Réponse : '+correct+'. '+explanation;
+  fb.className='quiz-feedback '+(isCorrect?'correct':'wrong');
+  const st=card.querySelector('.quiz-status');
+  if(st){st.textContent=isCorrect?'✅ Réussi':'❌ Raté';st.className='quiz-status done';}
+  if(isCorrect)awardXP(xp,'Vrai/Faux réussi');
+}
+function handleFill(card,answers,xp){
+  const blanks=card.querySelectorAll('.blank');
+  let allOk=true;
+  blanks.forEach((b,i)=>{
+    const val=(b.value!==undefined?b.value:b.textContent).trim().toLowerCase();
+    const ok=answers[i].toLowerCase().split('|').includes(val);
+    b.classList.toggle('correct',ok);b.classList.toggle('wrong',!ok);
+    if(b.tagName==='INPUT')b.disabled=true;
+    if(!ok)allOk=false;
+  });
+  const fb=card.querySelector('.quiz-feedback');
+  fb.textContent=allOk?'✅ Parfait !':'❌ Certaines réponses sont incorrectes.';
+  fb.className='quiz-feedback '+(allOk?'correct':'wrong');
+  if(!card.dataset.done){
+    card.dataset.done='1';
+    const st=card.querySelector('.quiz-status');
+    if(st){st.textContent=allOk?'✅ Réussi':'❌ Raté';st.className='quiz-status done';}
+    if(allOk)awardXP(xp,'Complétion réussie');
+  }
+}
+function resetQuiz(card){
+  card.dataset.done='';
+  card.querySelectorAll('.mcq-opt').forEach(o=>{o.disabled=false;o.classList.remove('correct','wrong');});
+  card.querySelectorAll('.tf-btn').forEach(b=>{b.disabled=false;b.classList.remove('correct','wrong');});
+  card.querySelectorAll('.blank').forEach(b=>{b.value='';b.disabled=false;b.classList.remove('correct','wrong');});
+  const fb=card.querySelector('.quiz-feedback');if(fb){fb.className='quiz-feedback';fb.textContent='';}
+  const st=card.querySelector('.quiz-status');if(st){st.className='quiz-status';st.textContent='';}
+}
+
+/* ══ DATA ══ */
+const DATA = [
+  {id:"bases",label:"🔵 Les Bases",icon:"🔵",cls:"s-bases",items:[
+    {kw:"variable",def:"Un nom symbolique lié à une valeur en mémoire. Python est à typage dynamique : le type est déduit automatiquement.",deep:"Une variable est une étiquette, pas une boîte. x=5 puis x='hello' : l'étiquette x change de cible. Python gère la mémoire seul.",badge:"essentiel",badgeColor:"#1e90ff",code:`x = <span class="num">5</span>          <span class="cmt"># int</span>\nnom = <span class="str">"Ace"</span>   <span class="cmt"># str</span>\nx = x + <span class="num">1</span>     <span class="cmt"># x vaut 6</span>`},
+    {kw:"int / float / str / bool",def:"Les 4 types de base. int=entier, float=décimal, str=texte, bool=True/False.",deep:"bool hérite de int : True==1. Les floats ont des imprécisions binaires : 0.1+0.2 ≠ 0.3 exactement.",badge:"type",badgeColor:"#4aa8ff",code:`age = <span class="num">20</span>       <span class="cmt"># int</span>\nprix = <span class="num">9.99</span>   <span class="cmt"># float</span>\nnom = <span class="str">"Alice"</span> <span class="cmt"># str</span>\nok = <span class="kw">True</span>      <span class="cmt"># bool</span>`},
+    {kw:"= vs ==",def:"= stocke une valeur (affectation). == compare deux valeurs (égalité). Erreur classique : mettre = dans un if.",deep:"== compare les valeurs. is compare l'identité mémoire. Utilise toujours == pour comparer, is seulement pour None.",badge:"⚠️ piège",badgeColor:"#ff3c5a",code:`x = <span class="num">10</span>      <span class="cmt"># stocke</span>\nx == <span class="num">10</span>   <span class="cmt"># True (compare)</span>\nx <span class="kw">is</span> <span class="kw">None</span> <span class="cmt"># idiome Python</span>`},
+    {kw:"indentation",def:"Les 4 espaces qui définissent les blocs. Python n'utilise pas d'accolades — l'indentation EST la syntaxe.",deep:"Convention PEP8: 4 espaces par niveau. Ne jamais mélanger tabs et espaces.",badge:"syntaxe",code:`<span class="kw">if</span> x > <span class="num">0</span>:\n    <span class="fn">print</span>(<span class="str">"positif"</span>) <span class="cmt"># 4 esp.</span>\n    <span class="kw">if</span> x > <span class="num">100</span>:\n        <span class="fn">print</span>(<span class="str">"grand"</span>)`},
+    {kw:"f-string",def:"Façon moderne d'insérer des variables dans une string. Préfixe f, variables entre {}.",badge:"syntaxe",badgeColor:"#f7c96a",code:`nom = <span class="str">"Ace"</span>; age = <span class="num">17</span>\nmsg = <span class="kw">f</span><span class="str">"Salut {nom}, {age} ans"</span>\n<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Dans 10 ans : {age+10}"</span>)`},
+    {kw:"opérateurs arithmétiques",def:"+ - * / // % **. / donne toujours un float. // = division entière. % = modulo (reste). ** = puissance.",badge:"opérateur",code:`<span class="num">10</span> / <span class="num">3</span>   <span class="cmt"># 3.333 (float)</span>\n<span class="num">10</span> // <span class="num">3</span>  <span class="cmt"># 3 (entier)</span>\n<span class="num">10</span> % <span class="num">3</span>   <span class="cmt"># 1 (reste)</span>\n<span class="num">2</span> ** <span class="num">8</span>   <span class="cmt"># 256 (puissance)</span>`},
+  ]},
+  {id:"fonctions",label:"🟢 Fonctions",icon:"🟢",cls:"s-fonctions",items:[
+    {kw:"def — définir une fonction",def:"Crée une fonction réutilisable. Principe DRY : définir une fois, appeler autant de fois qu'on veut.",deep:"Une bonne fonction fait UNE chose, a un nom parlant, prend des paramètres et retourne avec return.",badge:"mot-clé",badgeColor:"#00e5cc",code:`<span class="kw">def</span> <span class="fn">saluer</span>(prenom):\n    <span class="kw">return</span> <span class="kw">f</span><span class="str">"Salut {prenom} !"</span>\n\n<span class="fn">saluer</span>(<span class="str">"Ace"</span>)  <span class="cmt"># → "Salut Ace !"</span>`},
+    {kw:"paramètre vs argument",def:"Paramètre : variable dans la DÉFINITION. Argument : valeur concrète à l'APPEL.",deep:"Paramètres par défaut : def f(x, n=10). *args = nombre variable. **kwargs = arguments nommés.",badge:"⚠️ exam",badgeColor:"#ffd700",code:`<span class="kw">def</span> <span class="fn">puissance</span>(base, exp=<span class="num">2</span>):\n    <span class="kw">return</span> base ** exp\n<span class="fn">puissance</span>(<span class="num">3</span>)      <span class="cmt"># → 9</span>\n<span class="fn">puissance</span>(<span class="num">2</span>,<span class="num">10</span>)  <span class="cmt"># → 1024</span>`},
+    {kw:"return",def:"Renvoie une valeur et arrête la fonction. Sans return → retourne None. print() ≠ return.",deep:"return peut renvoyer plusieurs valeurs (tuple implicite). Une fonction peut avoir plusieurs return.",badge:"mot-clé",code:`<span class="kw">def</span> <span class="fn">max2</span>(a, b):\n    <span class="kw">if</span> a > b: <span class="kw">return</span> a\n    <span class="kw">return</span> b\n\nresultat = <span class="fn">max2</span>(<span class="num">5</span>, <span class="num">3</span>)  <span class="cmt"># 5</span>`},
+    {kw:"portée (scope)",def:"Variable locale : créée dans une fonction, invisible dehors. Variable globale : accessible partout.",deep:"Règle LEGB : Local → Enclosing → Global → Builtin. Évite global — passe les valeurs en paramètre.",badge:"concept",code:`score = <span class="num">0</span>  <span class="cmt"># globale</span>\n<span class="kw">def</span> <span class="fn">gagner</span>(n):\n    pts = n * <span class="num">10</span>  <span class="cmt"># locale</span>\n    <span class="kw">return</span> pts\nscore += <span class="fn">gagner</span>(<span class="num">3</span>)`},
+    {kw:"lambda",def:"Fonction anonyme sur une ligne. Utile pour sorted(), map(), filter().",badge:"avancé",code:`carre = <span class="kw">lambda</span> x: x**<span class="num">2</span>\nmots = [<span class="str">"banana"</span>,<span class="str">"kiwi"</span>,<span class="str">"ananas"</span>]\n<span class="fn">sorted</span>(mots, key=<span class="kw">lambda</span> m: <span class="fn">len</span>(m))`},
+  ]},
+  {id:"boucles",label:"🟡 Boucles",icon:"🟡",cls:"s-boucles",items:[
+    {kw:"for … in",def:"Parcourt chaque élément d'un itérable. Idéal quand le nombre d'itérations est connu.",deep:"enumerate() pour index+valeur. zip() pour deux listes en parallèle. Évite for i in range(len(lst)) — préfère for x in lst.",badge:"mot-clé",badgeColor:"#ffd700",code:`<span class="kw">for</span> fruit <span class="kw">in</span> [<span class="str">"pomme"</span>,<span class="str">"kiwi"</span>]:\n    <span class="fn">print</span>(fruit)\n<span class="kw">for</span> i, v <span class="kw">in</span> <span class="fn">enumerate</span>([<span class="str">"a"</span>,<span class="str">"b"</span>]):\n    <span class="fn">print</span>(i, v)`},
+    {kw:"while",def:"Boucle tant que la condition est True. Attention aux boucles infinies !",deep:"Utilisé quand on ne connaît pas le nombre d'itérations : saisie valide, game over, lecture flux.",badge:"mot-clé",code:`vie = <span class="num">100</span>\n<span class="kw">while</span> vie > <span class="num">0</span>:\n    vie -= <span class="num">25</span>\n    <span class="fn">print</span>(vie)`},
+    {kw:"range(start, stop, step)",def:"Génère une séquence d'entiers. stop EST EXCLU. range(10,0,-1) compte à rebours.",badge:"built-in",code:`<span class="fn">range</span>(<span class="num">5</span>)         <span class="cmt"># 0,1,2,3,4</span>\n<span class="fn">range</span>(<span class="num">1</span>,<span class="num">6</span>)      <span class="cmt"># 1,2,3,4,5</span>\n<span class="fn">range</span>(<span class="num">0</span>,<span class="num">10</span>,<span class="num">2</span>)   <span class="cmt"># 0,2,4,6,8</span>`},
+    {kw:"break / continue",def:"break stoppe la boucle. continue saute l'itération courante.",badge:"mot-clé",code:`<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">10</span>):\n    <span class="kw">if</span> i==<span class="num">5</span>: <span class="kw">break</span>\n    <span class="kw">if</span> i%<span class="num">2</span>: <span class="kw">continue</span>\n    <span class="fn">print</span>(i)  <span class="cmt"># 0 2 4</span>`},
+    {kw:"compréhension de liste",def:"[expression for elem in itérable if condition]. Plus concis qu'une boucle for.",badge:"avancé",code:`carres=[x**<span class="num">2</span> <span class="kw">for</span> x <span class="kw">in</span> <span class="fn">range</span>(<span class="num">6</span>)]\npairs=[x <span class="kw">for</span> x <span class="kw">in</span> <span class="fn">range</span>(<span class="num">10</span>) <span class="kw">if</span> x%<span class="num">2</span>==<span class="num">0</span>]`},
+  ]},
+  {id:"conditions",label:"🔴 Conditions",icon:"🔴",cls:"s-conditions",items:[
+    {kw:"if / elif / else",def:"Structure conditionnelle. Python évalue de haut en bas, s'arrête au premier True.",badge:"mot-clé",badgeColor:"#ff3c5a",code:`note = <span class="num">14</span>
+<span class="kw">if</span> note >= <span class="num">16</span>:   <span class="fn">print</span>(<span class="str">"TB"</span>)
+<span class="kw">elif</span> note >= <span class="num">12</span>: <span class="fn">print</span>(<span class="str">"Bien"</span>)
+<span class="kw">elif</span> note >= <span class="num">10</span>: <span class="fn">print</span>(<span class="str">"Passable"</span>)
+<span class="kw">else</span>:            <span class="fn">print</span>(<span class="str">"Insuffisant"</span>)`},
+    {kw:"and / or / not",def:"Opérateurs logiques. and=toutes vraies. or=au moins une. not=inverse. Évaluation paresseuse.",badge:"opérateur",code:`<span class="kw">if</span> age>=<span class="num">18</span> <span class="kw">and</span> inscrit: <span class="fn">print</span>(<span class="str">"OK"</span>)\n<span class="kw">if</span> <span class="kw">not</span> (x<<span class="num">0</span> <span class="kw">or</span> x><span class="num">100</span>): <span class="fn">print</span>(<span class="str">"valide"</span>)`},
+    {kw:"in / not in",def:"Teste l'appartenance à une séquence. O(1) pour sets/dicts, O(n) pour listes.",badge:"opérateur",code:`<span class="str">"kiwi"</span> <span class="kw">in</span> [<span class="str">"pomme"</span>,<span class="str">"kiwi"</span>]  <span class="cmt"># True</span>\n<span class="str">"e"</span> <span class="kw">in</span> <span class="str">"Persona"</span>          <span class="cmt"># True</span>\n<span class="num">5</span> <span class="kw">not in</span> {<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>}          <span class="cmt"># True</span>`},
+  ]},
+  {id:"structures",label:"🔷 Structures de données",icon:"🔷",cls:"s-structures",items:[
+    {kw:"liste [ ]",def:"Collection ordonnée et modifiable. Accès par index (commence à 0). Index négatif = depuis la fin.",deep:"Méthodes : .append(x), .insert(i,x), .pop(), .remove(x), .sort(), .reverse(), .copy(), .extend(lst).",badge:"structure",badgeColor:"#00cfff",code:`lst = [<span class="str">"Makoto"</span>,<span class="str">"Aigis"</span>,<span class="str">"Ryoji"</span>]
+lst[<span class="num">0</span>]              <span class="cmt"># "Makoto"</span>
+lst[-<span class="num">1</span>]             <span class="cmt"># "Ryoji"</span>
+lst[<span class="num">0</span>:<span class="num">2</span>]            <span class="cmt"># ["Makoto","Aigis"]</span>
+lst.<span class="fn">append</span>(<span class="str">"Junpei"</span>)`},
+    {kw:"dictionnaire { }",def:"Paires clé:valeur. Accès O(1) par clé. Python 3.7+ : ordre d'insertion conservé.",deep:"Méthodes : .get(k, défaut), .keys(), .values(), .items(), .update(), .pop(k), .setdefault().",badge:"structure",code:`perso={<span class="str">"nom"</span>:<span class="str">"Aigis"</span>,<span class="str">"hp"</span>:<span class="num">120</span>}
+perso[<span class="str">"nom"</span>]          <span class="cmt"># "Aigis"</span>
+perso.<span class="fn">get</span>(<span class="str">"xp"</span>,<span class="num">0</span>)    <span class="cmt"># 0 (défaut)</span>`},
+    {kw:"tuple ( )",def:"Collection ordonnée IMMUABLE. Plus rapide que la liste. Utilisé pour les données fixes.",badge:"structure",code:`point = (<span class="num">3.5</span>, <span class="num">7.2</span>)\nx, y = point       <span class="cmt"># unpacking</span>\n<span class="cmt"># point[0]=10    ← TypeError!</span>`},
+    {kw:"set { }",def:"Ensemble non ordonné d'éléments UNIQUES. O(1) pour les tests d'appartenance.",badge:"structure",code:`s = <span class="fn">set</span>([<span class="num">1</span>,<span class="num">2</span>,<span class="num">2</span>,<span class="num">3</span>])  <span class="cmt"># {1,2,3}</span>
+a & b  <span class="cmt"># intersection</span>
+a | b  <span class="cmt"># union</span>`},
+  ]},
+  {id:"classes",label:"🟣 Classes & Objets",icon:"🟣",cls:"s-classes",items:[
+    {kw:"class — définir une classe",def:"Modèle qui regroupe attributs (données) et méthodes (fonctions). Base de la POO.",deep:"La classe est le plan, l'objet est la maison. On peut créer 1000 objets depuis une classe.",badge:"⚠️ exam",badgeColor:"#a864ff",code:`<span class="kw">class</span> <span class="fn">Personnage</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, nom, hp):
+        <span class="kw">self</span>.nom = nom
+        <span class="kw">self</span>.hp  = hp`},
+    {kw:"self",def:"Référence à l'objet courant dans une méthode. Toujours premier paramètre. Python le passe automatiquement.",badge:"mot-clé",code:`<span class="kw">def</span> <span class="fn">invoquer</span>(<span class="kw">self</span>):
+    <span class="fn">print</span>(<span class="kw">f</span><span class="str">"{self.nom} invoque !"</span>)
+
+e = <span class="fn">Evoker</span>(<span class="str">"Makoto"</span>)
+e.<span class="fn">invoquer</span>()  <span class="cmt"># self = e</span>`},
+    {kw:"__init__ (constructeur)",def:"Appelé automatiquement à la création de l'objet. Initialise les attributs.",deep:"Les dunder methods (__str__, __len__, __add__…) définissent le comportement avec les opérateurs Python.",badge:"spécial",code:`<span class="kw">class</span> <span class="fn">Voiture</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, marque):
+        <span class="kw">self</span>.marque = marque
+    <span class="kw">def</span> <span class="fn">__str__</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> <span class="kw">self</span>.marque`},
+    {kw:"héritage",def:"Classe enfant hérite de tout le parent. super() appelle le __init__ parent.",badge:"avancé",code:`<span class="kw">class</span> <span class="fn">Androide</span>(<span class="fn">Personnage</span>):
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>,nom,hp,modele):
+        <span class="fn">super</span>().__init__(nom,hp)
+        <span class="kw">self</span>.modele=modele`},
+  ]},
+  {id:"builtin",label:"⚡ Fonctions Built-in",icon:"⚡",cls:"s-builtin",items:[
+    {kw:"print()",def:"Affiche dans la console. sep= séparateur, end= fin de ligne. Pour déboguer.",badge:"built-in",badgeColor:"#00e596",code:`<span class="fn">print</span>(<span class="str">"A"</span>,<span class="str">"B"</span>,sep=<span class="str">"-"</span>)   <span class="cmt"># A-B</span>\n<span class="fn">print</span>(<span class="str">"x"</span>,end=<span class="str">""</span>)       <span class="cmt"># sans \n</span>`},
+    {kw:"input()",def:"Saisie utilisateur. Retourne TOUJOURS un str. Convertis avec int() ou float().",badge:"built-in",code:`age=<span class="fn">int</span>(<span class="fn">input</span>(<span class="str">"Ton âge : "</span>))\n<span class="kw">try</span>:\n    n=<span class="fn">int</span>(<span class="fn">input</span>(<span class="str">"Entier : "</span>))\n<span class="kw">except</span> ValueError:\n    <span class="fn">print</span>(<span class="str">"Pas un entier"</span>)`},
+    {kw:"len() / range() / type()",def:"len() = longueur. range() = séquence d'entiers (stop exclu). type() = type d'un objet.",badge:"built-in",code:`<span class="fn">len</span>(<span class="str">"Python"</span>)    <span class="cmt"># 6</span>\n<span class="fn">len</span>([<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>])    <span class="cmt"># 3</span>\n<span class="fn">type</span>(<span class="num">3.14</span>)      <span class="cmt"># float</span>\n<span class="fn">isinstance</span>(<span class="kw">True</span>,<span class="fn">int</span>)  <span class="cmt"># True</span>`},
+    {kw:"min() / max() / sum() / abs()",def:"Fonctions mathématiques sur les itérables et valeurs. Incontournables.",badge:"built-in",code:`<span class="fn">min</span>(<span class="num">3</span>,<span class="num">1</span>,<span class="num">4</span>)        <span class="cmt"># 1</span>\n<span class="fn">max</span>([<span class="num">10</span>,<span class="num">5</span>,<span class="num">20</span>])     <span class="cmt"># 20</span>\n<span class="fn">sum</span>(<span class="fn">range</span>(<span class="num">101</span>))    <span class="cmt"># 5050</span>\n<span class="fn">abs</span>(-<span class="num">42</span>)          <span class="cmt"># 42</span>`},
+    {kw:"sorted() / enumerate() / zip()",def:"sorted() trie sans modifier. enumerate() donne index+valeur. zip() combine deux itérables.",badge:"built-in",code:`<span class="fn">sorted</span>([<span class="num">3</span>,<span class="num">1</span>,<span class="num">2</span>])         <span class="cmt"># [1,2,3]</span>\n<span class="fn">list</span>(<span class="fn">enumerate</span>(<span class="str">"abc"</span>))  <span class="cmt"># [(0,'a')…]</span>\n<span class="fn">list</span>(<span class="fn">zip</span>([<span class="num">1</span>,<span class="num">2</span>],[<span class="str">"a"</span>,<span class="str">"b"</span>]))<span class="cmt"># [(1,'a')…]</span>`},
+    {kw:"try / except",def:"Gère les erreurs proprement. try=code risqué. except=traitement si erreur.",badge:"avancé",code:`<span class="kw">try</span>:
+    x = <span class="fn">int</span>(<span class="fn">input</span>(<span class="str">"Entier : "</span>))
+    <span class="fn">print</span>(<span class="num">100</span> / x)
+<span class="kw">except</span> ValueError:
+    <span class="fn">print</span>(<span class="str">"Pas un entier"</span>)
+<span class="kw">except</span> ZeroDivisionError:
+    <span class="fn">print</span>(<span class="str">"Division par zéro"</span>)`},
+  ]},
+  {id:"formules",label:"📐 Formules à retenir",icon:"📐",cls:"s-formules",type:"formule",items:[
+    {name:"Compter occurrences dans une liste",syntax:`<span class="fn">liste</span>.count(<span class="str">valeur</span>)`,desc:"Retourne le nombre de fois que valeur apparaît dans la liste."},
+    {name:"Trier une liste de dicts par clé",syntax:`<span class="fn">sorted</span>(liste, key=<span class="kw">lambda</span> x: x[<span class="str">'clé'</span>])`,desc:"Tri fonctionnel sans modifier la liste originale."},
+    {name:"Inverser une liste/string",syntax:`liste[::-<span class="num">1</span>]  <span class="cmt"># ou list(reversed(lst))</span>`,desc:"Slicing avec step=-1. Fonctionne sur strings, listes, tuples."},
+    {name:"Aplatir une liste de listes",syntax:`[x <span class="kw">for</span> lst <span class="kw">in</span> listes <span class="kw">for</span> x <span class="kw">in</span> lst]`,desc:"Compréhension avec double for pour aplatir en une dimension."},
+    {name:"Dict depuis deux listes",syntax:`<span class="fn">dict</span>(<span class="fn">zip</span>(clés, valeurs))`,desc:"zip() assemble en paires, dict() convertit en dictionnaire."},
+    {name:"Valeur unique d'une liste",syntax:`<span class="fn">list</span>(<span class="fn">set</span>(liste))`,desc:"set() supprime les doublons, list() reconvertit. Attention : perd l'ordre."},
+    {name:"Vérifier si une liste est vide",syntax:`<span class="kw">if not</span> liste:  <span class="cmt"># Pythonique</span>`,desc:"Les listes vides sont 'falsy'. Plus idiomatique que if len(liste)==0."},
+    {name:"Valeur par défaut pour une clé",syntax:`d.<span class="fn">get</span>(<span class="str">'clé'</span>, valeur_défaut)`,desc:"Accès sécurisé : retourne la valeur_défaut si la clé n'existe pas."},
+    {name:"Opérateur ternaire",syntax:`x = <span class="str">'pair'</span> <span class="kw">if</span> n%<span class="num">2</span>==<span class="num">0</span> <span class="kw">else</span> <span class="str">'impair'</span>`,desc:"Expression conditionnelle sur une ligne. Remplace if/else simple."},
+    {name:"Swap de deux variables",syntax:`a, b = b, a`,desc:"Échange sans variable temporaire. Uniquement possible en Python."},
+    {name:"Vérifier le type",syntax:`<span class="fn">isinstance</span>(x, (<span class="fn">int</span>, <span class="fn">float</span>))`,desc:"Préféré à type(x)==int car gère l'héritage. Accepte un tuple de types."},
+    {name:"Dépaqueter une liste",syntax:`premier, *reste = liste`,desc:"* collecte tous les éléments restants dans une liste."},
+  ]},
+  {id:"lecons",label:"📖 Leçons",icon:"📖",cls:"s-lecons",type:"lecon",items:[
+    {num:"01",title:"Variables & Types",intro:"Une variable est une étiquette sur une valeur. Python choisit le type automatiquement — c'est le typage dynamique.",sections:[
+      {h:"Les 4 types fondamentaux",text:"int (entier), float (décimal), str (texte), bool (True/False). Chaque type définit quelles opérations sont possibles.",code:`x = <span class="num">10</span>; nom = <span class="str">"Ace"</span>; pi = <span class="num">3.14</span>; ok = <span class="kw">True</span>\n<span class="fn">type</span>(x)   <span class="cmt"># &lt;class 'int'&gt;</span>`},
+      {h:"= vs == : la confusion fatale",text:"= stocke une valeur dans une variable. == compare deux valeurs. Dans un if, on compare toujours avec ==.",code:`age = <span class="num">17</span>         <span class="cmt"># stocke</span>\nage == <span class="num">18</span>       <span class="cmt"># compare → False</span>\n<span class="kw">if</span> age == <span class="num">18</span>:  <span class="cmt"># test</span>\n    <span class="fn">print</span>(<span class="str">"majeur"</span>)`},
+      {h:"Conversions : le piège d'input()",text:"input() retourne TOUJOURS un str. Si tu attends un nombre, convertis-le immédiatement avec int() ou float().",code:`rep = <span class="fn">input</span>(<span class="str">"Ton âge : "</span>)  <span class="cmt"># str!</span>\nage = <span class="fn">int</span>(rep)             <span class="cmt"># str→int</span>\n<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Dans 10 ans : {age+10}"</span>)`}
+    ],tip:"Mémorise : = pour stocker, == pour comparer. input() retourne toujours un str."},
+    {num:"02",title:"Fonctions en profondeur",intro:"Une fonction est un mini-programme nommé et réutilisable. Elle prend des données (paramètres), fait un travail, et renvoie un résultat (return).",sections:[
+      {h:"Anatomie complète",text:"def = définir. Paramètres entre (). Corps indenté. return = renvoyer la valeur. Sans return, la fonction retourne None.",code:`<span class="kw">def</span> <span class="fn">calculer_tva</span>(prix, taux=<span class="num">0.20</span>):
+    tva = prix * taux
+    <span class="kw">return</span> prix + tva
+
+ttc = <span class="fn">calculer_tva</span>(<span class="num">100</span>)   <span class="cmt"># 120.0</span>`},
+      {h:"print() vs return : distinction clé",text:"print() affiche pour l'humain. return renvoie pour le programme. Une fonction avec seulement print() ne peut pas être utilisée dans un calcul.",code:`<span class="kw">def</span> <span class="fn">double_bad</span>(x): <span class="fn">print</span>(x*<span class="num">2</span>)
+<span class="kw">def</span> <span class="fn">double_ok</span>(x):  <span class="kw">return</span> x*<span class="num">2</span>
+
+<span class="fn">double_ok</span>(<span class="num">5</span>) + <span class="num">1</span>   <span class="cmt"># 11 ✅</span>
+<span class="fn">double_bad</span>(<span class="num">5</span>) + <span class="num">1</span>  <span class="cmt"># TypeError ❌</span>`},
+      {h:"Portée des variables",text:"Variable créée dans une fonction = locale, invisible dehors. Passe les valeurs en paramètre et récupère-les avec return.",code:`score = <span class="num">0</span>  <span class="cmt"># globale</span>
+<span class="kw">def</span> <span class="fn">gagner</span>(n):
+    pts = n * <span class="num">10</span>  <span class="cmt"># locale</span>
+    <span class="kw">return</span> pts
+score += <span class="fn">gagner</span>(<span class="num">3</span>)  <span class="cmt"># ✅</span>`}
+    ],tip:"Une fonction fait UNE chose, la fait bien, retourne avec return."},
+    {num:"03",title:"Boucles : for vs while",intro:"Les boucles évitent la répétition. for = séquence connue. while = condition inconnue.",sections:[
+      {h:"for — itérer proprement",text:"Pas besoin d'index pour parcourir une liste. enumerate() donne index+valeur. zip() combine deux listes.",code:`noms = [<span class="str">"Makoto"</span>,<span class="str">"Aigis"</span>,<span class="str">"Junpei"</span>]
+<span class="kw">for</span> i, nom <span class="kw">in</span> <span class="fn">enumerate</span>(noms):
+    <span class="fn">print</span>(<span class="kw">f</span><span class="str">"{i}: {nom}"</span>)`},
+      {h:"while — boucle conditionnelle",text:"Assure-toi que la condition finit par devenir False. Ctrl+C pour arrêter une boucle infinie.",code:`vie = <span class="num">100</span>; tour = <span class="num">0</span>
+<span class="kw">while</span> vie > <span class="num">0</span>:
+    vie -= <span class="num">20</span>; tour += <span class="num">1</span>
+    <span class="fn">print</span>(<span class="kw">f</span><span class="str">"Tour {tour}: {vie}HP"</span>)`},
+      {h:"Choisir le bon type",text:"Nombre d'itérations connu → for. Condition variable (saisie, game over…) → while.",code:`<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">10</span>): ...  <span class="cmt"># connu</span>
+rep = <span class="str">""</span>
+<span class="kw">while</span> rep != <span class="str">"oui"</span>:      <span class="cmt"># inconnu</span>
+    rep = <span class="fn">input</span>(<span class="str">"? "</span>)`}
+    ],tip:"for = nombre connu. while = condition variable."},
+    {num:"04",title:"POO : Classes & Objets",intro:"La POO modélise le monde réel. Un objet regroupe données (attributs) et comportements (méthodes).",sections:[
+      {h:"Classe = plan, Objet = maison",text:"La classe est le plan d'architecte. L'objet est la maison construite depuis ce plan. 1000 objets depuis 1 classe.",code:`<span class="kw">class</span> <span class="fn">Personnage</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>,nom,hp):
+        <span class="kw">self</span>.nom=nom; <span class="kw">self</span>.hp=hp
+    <span class="kw">def</span> <span class="fn">est_vivant</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> <span class="kw">self</span>.hp > <span class="num">0</span>`},
+      {h:"Comprendre self",text:"self = l'objet courant. hero.est_vivant() → Python traduit en Personnage.est_vivant(hero).",code:`hero = <span class="fn">Personnage</span>(<span class="str">"Ace"</span>, <span class="num">100</span>)
+<span class="fn">print</span>(hero.<span class="fn">est_vivant</span>())  <span class="cmt"># True</span>
+<span class="fn">print</span>(hero.nom)           <span class="cmt"># "Ace"</span>`},
+      {h:"Héritage",text:"La classe enfant hérite tout du parent. super() appelle le constructeur parent.",code:`<span class="kw">class</span> <span class="fn">Androide</span>(<span class="fn">Personnage</span>):
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>,nom,hp,modele):
+        <span class="fn">super</span>().__init__(nom,hp)
+        <span class="kw">self</span>.modele=modele`}
+    ],tip:"class=plan. self=l'objet. __init__=constructeur."},
+  ]},
+  {id:"erreurs",label:"🐛 Erreurs courantes",icon:"🐛",cls:"s-erreurs",type:"erreur",items:[
+    {name:"TypeError: unsupported operand",bad:`age = <span class="fn">input</span>(<span class="str">"Age: "</span>)\n<span class="fn">print</span>(age + <span class="num">10</span>)  <span class="cmt"># str + int!</span>`,good:`age = <span class="fn">int</span>(<span class="fn">input</span>(<span class="str">"Age: "</span>))\n<span class="fn">print</span>(age + <span class="num">10</span>)`,explication:"input() retourne toujours un str. Convertis avec int() ou float() avant d'utiliser."},
+    {name:"IndentationError",bad:`<span class="kw">def</span> <span class="fn">f</span>():\n<span class="fn">print</span>(<span class="str">"oups"</span>)  <span class="cmt"># pas indenté</span>`,good:`<span class="kw">def</span> <span class="fn">f</span>():\n    <span class="fn">print</span>(<span class="str">"ok"</span>)  <span class="cmt"># 4 espaces</span>`,explication:"Le corps d'une fonction/if/for doit être indenté de 4 espaces. Python utilise l'indentation à la place des accolades."},
+    {name:"NameError: name not defined",bad:`<span class="fn">print</span>(resulat)  <span class="cmt"># faute de frappe</span>`,good:`resultat = <span class="num">42</span>\n<span class="fn">print</span>(resultat)`,explication:"Variable non définie ou faute de frappe. Python est case-sensitive : 'resultat' ≠ 'Resultat'."},
+    {name:"IndexError: list index out of range",bad:`lst=[<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>]\n<span class="fn">print</span>(lst[<span class="num">3</span>])  <span class="cmt"># inexistant</span>`,good:`<span class="fn">print</span>(lst[<span class="num">2</span>])  <span class="cmt"># dernier</span>\n<span class="fn">print</span>(lst[-<span class="num">1</span>]) <span class="cmt"># idiome Python</span>`,explication:"Liste de 3 éléments : indices 0, 1, 2. -1 désigne le dernier."},
+    {name:"KeyError: clé absente",bad:`d={<span class="str">"nom"</span>:<span class="str">"Ace"</span>}\n<span class="fn">print</span>(d[<span class="str">"age"</span>])  <span class="cmt"># clé absente</span>`,good:`<span class="fn">print</span>(d.<span class="fn">get</span>(<span class="str">"age"</span>,<span class="num">0</span>))  <span class="cmt"># 0 par défaut</span>`,explication:"Utilise .get(clé, défaut) pour un accès sécurisé au lieu de d[clé]."},
+    {name:"= dans un if",bad:`<span class="kw">if</span> x = <span class="num">10</span>:   <span class="cmt"># SyntaxError!</span>`,good:`<span class="kw">if</span> x == <span class="num">10</span>:  <span class="cmt"># correct</span>`,explication:"= est l'affectation. == est la comparaison. Dans un if, on compare toujours avec ==."},
+    {name:"Oublier self",bad:`<span class="kw">class</span> <span class="fn">A</span>:\n    <span class="kw">def</span> <span class="fn">f</span>(): <span class="fn">print</span>(<span class="str">"oups"</span>)\na=<span class="fn">A</span>(); a.<span class="fn">f</span>()  <span class="cmt"># TypeError!</span>`,good:`<span class="kw">class</span> <span class="fn">A</span>:\n    <span class="kw">def</span> <span class="fn">f</span>(<span class="kw">self</span>): <span class="fn">print</span>(<span class="str">"ok"</span>)`,explication:"Toutes les méthodes d'instance doivent avoir self en premier paramètre."},
+  ]},
+  {id:"projets",label:"🚀 Projets guidés",icon:"🚀",cls:"s-projets",type:"projet",items:[
+    {num:"1",title:"Jeu de devinette",level:"DÉBUTANT",desc:"Un programme demande à l'utilisateur de deviner un nombre aléatoire entre 1 et 100. Il doit dire 'plus grand' ou 'plus petit' jusqu'à la bonne réponse.",skills:["random","while","input","if/elif"],steps:["Importer random et générer un nombre secret avec randint(1,100)","Créer une boucle while True","Dans la boucle : récupérer une saisie avec input(), convertir en int","Comparer avec if/elif/else et afficher un indice","Sortir avec break quand c'est trouvé, afficher le nombre de tentatives"]},
+    {num:"2",title:"Gestionnaire de contacts",level:"DÉBUTANT",desc:"Programme avec menu (ajouter, rechercher, supprimer, afficher). Utilise un dictionnaire pour stocker les contacts.",skills:["dict","while","input","fonctions"],steps:["Créer un dict contacts vide","Créer les fonctions : ajouter(), rechercher(), supprimer(), afficher_tous()","Créer une boucle while avec menu affiché","Récupérer le choix de l'utilisateur et appeler la bonne fonction","Gérer les cas d'erreur (contact inexistant)"]},
+    {num:"3",title:"Calculatrice POO",level:"INTERMÉDIAIRE",desc:"Une classe Calculatrice avec attribut 'mémoire'. Méthodes : add, sub, mul, div, save_to_memory, recall_memory, reset.",skills:["class","__init__","méthodes","try/except"],steps:["Créer la classe Calculatrice avec self.resultat=0 et self.memoire=0","Implémenter les 4 opérations de base (gérer division par zéro avec try/except)","Ajouter save_to_memory(), recall_memory(), reset()","Ajouter une méthode __str__ pour afficher l'état","Créer une interface menu dans une boucle while"]},
+    {num:"4",title:"Agenda de tâches avec fichier",level:"INTERMÉDIAIRE",desc:"Application de gestion de tâches sauvegardée dans un fichier JSON. Les tâches persistent entre les exécutions.",skills:["json","open()","liste","dict"],steps:["Créer les fonctions charger_taches() et sauvegarder_taches() avec json","Chaque tâche = dict {titre, priorité, done}","Fonctions : ajouter, marquer_fait, supprimer, afficher par priorité","Charger au démarrage, sauvegarder à chaque modification","Afficher les statistiques : X/Y tâches complétées"]},
+    {num:"5",title:"Jeu RPG texte",level:"AVANCÉ",desc:"Mini RPG en console avec combat au tour par tour. Classes Personnage, Ennemi, Combat. Système HP, attaque, magie, inventaire.",skills:["POO","héritage","random","fichiers"],steps:["Créer classe Personnage(nom, hp, atk, magie) avec méthodes attaquer(), utiliser_magie(), est_ko()","Créer classe Ennemi héritant de Personnage avec une IA simple (random)","Créer classe Combat avec la boucle de combat tour par tour","Ajouter système d'inventaire (liste d'objets)","Sauvegarder la progression avec json"]},
+  ]},
+  {id:"strings",label:"📝 Méthodes String",icon:"📝",cls:"s-strings",items:[
+    {kw:".upper()/.lower()/.capitalize()",def:"Changent la casse. title() met chaque première lettre en majuscule.",badge:"méthode",badgeColor:"#f7c96a",code:`s = <span class="str">"hello MONDE"</span>
+s.<span class="fn">upper</span>()      <span class="cmt"># "HELLO MONDE"</span>
+s.<span class="fn">lower</span>()      <span class="cmt"># "hello monde"</span>
+s.<span class="fn">title</span>()      <span class="cmt"># "Hello Monde"</span>`},
+    {kw:".strip() / .split() / .join()",def:".strip() supprime espaces. .split(sep) découpe en liste. .join(lst) assemble une liste en string.",badge:"méthode",code:`<span class="str">"  ok  "</span>.<span class="fn">strip</span>()          <span class="cmt"># "ok"</span>
+<span class="str">"a,b,c"</span>.<span class="fn">split</span>(<span class="str">","</span>)       <span class="cmt"># ['a','b','c']</span>
+<span class="str">"-"</span>.<span class="fn">join</span>([<span class="str">"a"</span>,<span class="str">"b"</span>])       <span class="cmt"># "a-b"</span>`},
+    {kw:".replace() / .find() / .count()",def:".replace(a,b) remplace. .find(s) retourne l'index (-1 si absent). .count(s) compte.",badge:"méthode",code:`<span class="str">"bonjour"</span>.<span class="fn">replace</span>(<span class="str">"o"</span>,<span class="str">"0"</span>) <span class="cmt"># "b0nj0ur"</span>
+<span class="str">"abracadabra"</span>.<span class="fn">count</span>(<span class="str">"a"</span>)  <span class="cmt"># 5</span>
+<span class="str">"python"</span>.<span class="fn">find</span>(<span class="str">"th"</span>)        <span class="cmt"># 2</span>`},
+    {kw:"f-string formatage avancé",def:"{:.2f} = 2 décimales. {:05d} = entier sur 5 chiffres. {:>10} = aligné à droite.",badge:"syntaxe",code:`pi = <span class="num">3.14159</span>
+<span class="kw">f</span><span class="str">"{pi:.2f}"</span>    <span class="cmt"># "3.14"</span>
+<span class="kw">f</span><span class="str">"{42:05d}"</span>    <span class="cmt"># "00042"</span>
+<span class="kw">f</span><span class="str">"{1e6:,.0f}"</span>  <span class="cmt"># "1,000,000"</span>`},
+  ]},
+  {id:"fichiers",label:"📁 Fichiers & Modules",icon:"📁",cls:"s-fichiers",items:[
+    {kw:"open() — lire/écrire",def:"Ouvre un fichier. Toujours avec 'with open()' pour fermer automatiquement. Modes: r, w, a, rb.",badge:"built-in",badgeColor:"#00e596",code:`<span class="kw">with</span> <span class="fn">open</span>(<span class="str">"f.txt"</span>,<span class="str">"r"</span>,encoding=<span class="str">"utf-8"</span>) <span class="kw">as</span> f:
+    contenu = f.<span class="fn">read</span>()
+
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">"f.txt"</span>,<span class="str">"w"</span>) <span class="kw">as</span> f:
+    f.<span class="fn">write</span>(<span class="str">"Memento Mori\n"</span>)`},
+    {kw:"json — sauvegarder des données",def:"Convertit dicts/listes Python ↔ JSON. Idéal pour persister des données entre exécutions.",badge:"module",badgeColor:"#a864ff",code:`<span class="kw">import</span> json
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">"save.json"</span>,<span class="str">"w"</span>) <span class="kw">as</span> f:
+    json.<span class="fn">dump</span>(data, f, indent=<span class="num">2</span>)
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">"save.json"</span>) <span class="kw">as</span> f:
+    data = json.<span class="fn">load</span>(f)`},
+    {kw:"random / math / datetime",def:"Modules essentiels de la bibliothèque standard. random = aléatoire. math = calculs. datetime = dates.",badge:"module",code:`<span class="kw">import</span> random, math
+<span class="kw">from</span> datetime <span class="kw">import</span> datetime
+
+random.<span class="fn">randint</span>(<span class="num">1</span>,<span class="num">6</span>)   <span class="cmt"># dé</span>
+math.<span class="fn">sqrt</span>(<span class="num">16</span>)         <span class="cmt"># 4.0</span>
+datetime.<span class="fn">now</span>()        <span class="cmt"># maintenant</span>`},
+  ]},
+  {id:"cheatsheet",label:"⚡ Cheatsheet",icon:"⚡",cls:"s-cheatsheet",items:[
+    {kw:"Tous les opérateurs",def:"Arithmétiques: + - * / // % **. Comparaison: == != > < >= <=. Logiques: and or not. Appartenance: in not in. Identité: is is not.",badge:"référence",badgeColor:"#1e90ff",code:`x += <span class="num">1</span>  x -= <span class="num">1</span>  x *= <span class="num">2</span>  x //= <span class="num">2</span>
+<span class="kw">in</span>  <span class="kw">not in</span>  <span class="kw">is</span>  <span class="kw">is not</span>
+<span class="kw">and</span>  <span class="kw">or</span>  <span class="kw">not</span>`},
+    {kw:"Méthodes liste complètes",def:".append .insert .pop .remove .sort .reverse .clear .copy .count .index .extend",badge:"référence",code:`lst.<span class="fn">append</span>(x)      <span class="cmt"># ajoute en fin</span>
+lst.<span class="fn">insert</span>(i,x)    <span class="cmt"># insère à i</span>
+lst.<span class="fn">pop</span>(i)          <span class="cmt"># retire index i</span>
+lst.<span class="fn">sort</span>(reverse=<span class="kw">True</span>)
+lst.<span class="fn">copy</span>()          <span class="cmt"># copie</span>`},
+    {kw:"Méthodes dict complètes",def:".get .keys .values .items .update .pop .setdefault .clear .copy",badge:"référence",code:`d.<span class="fn">get</span>(k, défaut)
+d.<span class="fn">items</span>()   <span class="cmt"># paires (k,v)</span>
+d.<span class="fn">update</span>(d2)  <span class="cmt"># fusionner</span>
+k <span class="kw">in</span> d          <span class="cmt"># clé présente?</span>`},
+    {kw:"Patterns pythoniques",def:"Idiomes à connaître : swap, ternaire, unpack, flatten, dict depuis deux listes.",badge:"référence",code:`a, b = b, a             <span class="cmt"># swap</span>
+x = <span class="str">"pair"</span> <span class="kw">if</span> n%<span class="num">2</span>==<span class="num">0</span> <span class="kw">else</span> <span class="str">"impair"</span>
+a, *reste = liste        <span class="cmt"># unpack</span>
+<span class="fn">dict</span>(<span class="fn">zip</span>(clés, valeurs))  <span class="cmt"># dict</span>`},
+  ]},
+  {id:"applications",label:"🌐 Applications Python",icon:"🌐",cls:"s-applications",type:"application",items:[
+    {domaine:"🎮 Jeux & Simulations",couleur:"#a864ff",description:"Python est idéal pour créer des jeux textuels, simulations, jeux graphiques 2D.",modules:["pygame (jeux 2D)","turtle (dessin)","random","time"],exemples:["Devinette","Snake","Morpion","Blackjack","RPG texte","Simulateur"],snippet:`<span class="kw">import</span> random
+secret = random.<span class="fn">randint</span>(<span class="num">1</span>,<span class="num">100</span>)
+<span class="kw">while</span> <span class="kw">True</span>:
+    n = <span class="fn">int</span>(<span class="fn">input</span>(<span class="str">"Devine: "</span>))
+    <span class="kw">if</span> n == secret: <span class="kw">break</span>
+    <span class="fn">print</span>(<span class="str">"+"</span> <span class="kw">if</span> n<secret <span class="kw">else</span> <span class="str">"-"</span>)`},
+    {domaine:"📊 Data Science & IA",couleur:"#00cfff",description:"Python est le langage n°1 du machine learning et de la data.",modules:["pandas","numpy","matplotlib","scikit-learn","tensorflow"],exemples:["Analyse CSV","Graphiques","Prédiction","Détection images","Chatbot"],snippet:`<span class="kw">import</span> pandas <span class="kw">as</span> pd
+df = pd.<span class="fn">read_csv</span>(<span class="str">"data.csv"</span>)
+<span class="fn">print</span>(df.<span class="fn">describe</span>())
+df[<span class="str">"ventes"</span>].<span class="fn">plot</span>(kind=<span class="str">"bar"</span>)`},
+    {domaine:"🌐 Web & Automatisation",couleur:"#00e596",description:"Créer des sites web, APIs, bots ou automatiser des tâches.",modules:["flask","django","requests","beautifulsoup4","selenium"],exemples:["Site web","API REST","Bot Discord","Scraper","Automate"],snippet:`<span class="kw">from</span> flask <span class="kw">import</span> Flask
+app = <span class="fn">Flask</span>(__name__)
+@app.<span class="fn">route</span>(<span class="str">"/"</span>)
+<span class="kw">def</span> <span class="fn">home</span>(): <span class="kw">return</span> <span class="str">"Bonjour!"</span>
+app.<span class="fn">run</span>(debug=<span class="kw">True</span>)`},
+    {domaine:"🤖 Scripts & Utilitaires",couleur:"#ffd700",description:"Automatiser des tâches : renommer fichiers, envoyer emails, manipuler PDFs.",modules:["os","shutil","Pillow","smtplib","openpyxl"],exemples:["Renommer 500 fichiers","Redimensionner images","Rapport Excel","Emails auto"],snippet:`<span class="kw">import</span> os
+<span class="kw">for</span> i, f <span class="kw">in</span> <span class="fn">enumerate</span>(os.<span class="fn">listdir</span>(<span class="str">"."</span>)):
+    <span class="kw">if</span> f.<span class="fn">endswith</span>(<span class="str">".jpg"</span>):
+        os.<span class="fn">rename</span>(f, <span class="kw">f</span><span class="str">"photo_{i:03d}.jpg"</span>)`},
+  ]},
+  {id:"quiz",label:"🎮 Quiz XP",icon:"🎮",cls:"s-quiz",type:"quiz",items:[
+    {type:"mcq",title:"Type d'une variable",xp:15,question:"Quel est le type de la valeur <code>3.14</code> en Python ?",options:["int","float","str","double"],correct:1,explanation:"3.14 est un float (nombre décimal). double n'existe pas en Python."},
+    {type:"tf",title:"= vs ==",xp:10,question:"En Python, le signe <code>=</code> et le signe <code>==</code> ont la même signification.",correct:"false",explanation:"= est l'affectation (stocke une valeur), == est la comparaison (teste l'égalité)."},
+    {type:"fill",title:"Compléter : range()",xp:20,question:"Complète le code pour afficher les nombres pairs de 0 à 8 inclus :",codeTemplate:`<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="blank" data-idx="0"></span>, <span class="blank" data-idx="1"></span>, <span class="blank" data-idx="2"></span>):
+    <span class="fn">print</span>(i)`,answers:["0","10|9","2"]},
+    {type:"mcq",title:"Valeur retournée sans return",xp:15,question:"Que retourne une fonction Python qui n'a pas de <code>return</code> ?",options:["0","''","None","False"],correct:2,explanation:"Sans return, Python retourne implicitement None, qui représente 'rien'."},
+    {type:"tf",title:"Index d'une liste",xp:10,question:"Pour une liste de 5 éléments, le premier élément est à l'index 1.",correct:"false",explanation:"En Python, les index commencent à 0. Le premier élément est à l'index 0, le dernier à l'index 4."},
+    {type:"fill",title:"Définir une fonction",xp:20,question:"Écris le début d'une fonction qui prend deux paramètres <code>a</code> et <code>b</code> et retourne leur somme :",codeTemplate:`<span class="blank" data-idx="0"></span> <span class="fn">additionner</span>(a, b):
+    <span class="blank" data-idx="1"></span> a + b`,answers:["def","return"]},
+    {type:"mcq",title:"Méthode pour ajouter à une liste",xp:15,question:"Quelle méthode ajoute un élément à la FIN d'une liste ?",options:[".add()",".push()",".append()",".insert()"],correct:2,explanation:".append(x) ajoute x à la fin. .insert(i,x) insère à la position i. .add() n'existe pas sur les listes."},
+    {type:"tf",title:"input() et les types",xp:10,question:"La fonction <code>input()</code> peut retourner un entier directement si l'utilisateur tape un nombre.",correct:"false",explanation:"input() retourne TOUJOURS un str (chaîne de caractères). Il faut convertir avec int() ou float()."},
+    {type:"fill",title:"Accès dict sécurisé",xp:20,question:"Utilise la méthode appropriée pour accéder à la clé <code>'score'</code> avec la valeur par défaut <code>0</code> :",codeTemplate:`d = {<span class="str">"nom"</span>: <span class="str">"Ace"</span>}
+resultat = d.<span class="blank" data-idx="0"></span>(<span class="str">"score"</span>, <span class="blank" data-idx="1"></span>)`,answers:["get","0"]},
+    {type:"mcq",title:"Compréhension de liste",xp:15,question:"Que produit <code>[x**2 for x in range(4)]</code> ?",options:["[1, 4, 9, 16]","[0, 1, 4, 9]","[0, 2, 4, 6]","[1, 2, 3, 4]"],correct:1,explanation:"range(4) = 0,1,2,3. 0²=0, 1²=1, 2²=4, 3²=9. Résultat : [0, 1, 4, 9]."},
+    {type:"tf",title:"self en Python",xp:10,question:"<code>self</code> est un mot-clé réservé en Python.",correct:"false",explanation:"self est une CONVENTION, pas un mot-clé. On pourrait l'appeler 'this' ou 'moi' — mais par convention universelle on utilise 'self'."},
+    {type:"fill",title:"Boucle while basique",xp:20,question:"Complète cette boucle pour compter de 1 à 5 :",codeTemplate:`i = <span class="num">1</span>
+<span class="blank" data-idx="0"></span> i <= <span class="num">5</span>:
+    <span class="fn">print</span>(i)
+    i <span class="blank" data-idx="1"></span> 1`,answers:["while","+="]},
+    {type:"mcq",title:"Héritage Python",xp:15,question:"Dans une classe enfant, comment appelle-t-on le constructeur de la classe parente ?",options:["parent.__init__()","super().__init__()","Parent()","__base__.__init__()"],correct:1,explanation:"super().__init__() est la façon pythonique d'appeler le constructeur parent depuis une classe enfant."},
+    {type:"tf",title:"Liste vs Tuple",xp:10,question:"Un tuple peut être modifié après sa création.",correct:"false",explanation:"Les tuples sont immuables — on ne peut pas modifier leur contenu. C'est leur avantage : ils sont plus rapides et hashables."},
+    {type:"mcq",title:"Opérateur modulo",xp:15,question:"Que retourne <code>17 % 5</code> en Python ?",options:["3","2","3.4","0"],correct:1,explanation:"17 % 5 = 2. Le modulo retourne le reste de la division entière : 17 = 3×5 + 2. Le reste est 2."},
+    {type:"mcq",title:"enumerate()",xp:15,question:"Quel est l'intérêt principal de <code>enumerate(liste)</code> ?",options:["Trier la liste","Obtenir index + valeur dans une boucle","Supprimer les doublons","Convertir en tuple"],correct:1,explanation:"enumerate() permet de récupérer à la fois l'index et la valeur lors d'un parcours."},
+    {type:"fill",title:"List comprehension conditionnelle",xp:25,question:"Complète la compréhension pour garder uniquement les nombres pairs :",codeTemplate:`pairs = [x <span class="blank" data-idx="0"></span> x <span class="blank" data-idx="1"></span> <span class="fn">range</span>(<span class="num">10</span>) <span class="blank" data-idx="2"></span> x % <span class="num">2</span> == <span class="num">0</span>]`,answers:["for","in","if"]},
+    {type:"tf",title:"Mutabilité des clés dict",xp:10,question:"Une liste peut être utilisée comme clé de dictionnaire en Python.",correct:"false",explanation:"Les clés doivent être hashables (immutables). Une liste est mutable, donc refusée comme clé."},
+    {type:"mcq",title:"Longueur d'une string",xp:10,question:"Que vaut <code>len(\"Python\")</code> ?",options:["5","6","7","8"],correct:1,explanation:"\"Python\" contient 6 caractères."},
+    {type:"fill",title:"try/except",xp:25,question:"Complète ce bloc pour capturer une erreur de conversion en entier :",codeTemplate:`<span class="blank" data-idx="0"></span>:
+    n = <span class="fn">int</span>(<span class="fn">input</span>(<span class="str">"Nombre : "</span>))
+<span class="blank" data-idx="1"></span> ValueError:
+    <span class="fn">print</span>(<span class="str">"Entrée invalide"</span>)`,answers:["try","except"]},
+    {type:"mcq",title:"Slicing Python",xp:15,question:"Que renvoie <code>[10,20,30,40,50][1:4]</code> ?",options:["[10,20,30]","[20,30,40]","[20,30,40,50]","[30,40,50]"],correct:1,explanation:"Le slicing prend l'index de début inclus (1) et de fin exclu (4), donc 20,30,40."},
+    {type:"tf",title:"set et unicité",xp:10,question:"Un <code>set</code> peut contenir plusieurs fois la même valeur.",correct:"false",explanation:"Un set garde uniquement des valeurs uniques."},
+    {type:"fill",title:"Constructeur de classe",xp:20,question:"Complète la méthode d'initialisation d'une classe :",codeTemplate:`<span class="kw">class</span> <span class="fn">Compte</span>:
+    <span class="blank" data-idx="0"></span> <span class="fn">__init__</span>(<span class="blank" data-idx="1"></span>, solde):
+        self.solde = solde`,answers:["def","self"]},
+  ]},
+  {id:"avis",label:"⭐ Avis",icon:"⭐",cls:"s-avis",type:"avis",items:[]},
+];
+
+
+/* ══ CANVAS ══ */
+(function(){
+  const c=document.getElementById('bg-canvas'),ctx=c.getContext('2d');
+  let W,H,P=[];
+  function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}
+  resize();window.addEventListener('resize',()=>{resize();init();});
+  function init(){P=[];const N=Math.floor(W*H/22000);for(let i=0;i<N;i++)P.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.3,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,a:Math.random()*.4+.15,col:Math.random()>.5?'30,144,255':'0,207,255'});}
+  init();let f=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);f++;
+    for(const p of P){p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(${p.col},${p.a*(Math.sin(f*.02+p.x)*.2+.8)})`;ctx.fill();}
+    if(f%5===0)for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){const d=Math.hypot(P[i].x-P[j].x,P[i].y-P[j].y);if(d<100){ctx.beginPath();ctx.moveTo(P[i].x,P[i].y);ctx.lineTo(P[j].x,P[j].y);ctx.strokeStyle=`rgba(30,144,255,${.1*(1-d/100)})`;ctx.lineWidth=.4;ctx.stroke();}}
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ══ CLOCK ══ */
+function updateClock(){const n=new Date();document.getElementById('clock-time').textContent=[n.getHours(),n.getMinutes(),n.getSeconds()].map(v=>String(v).padStart(2,'0')).join(':');}
+updateClock();setInterval(updateClock,1000);
+
+/* ══ SCROLL ══ */
+window.addEventListener('scroll',()=>{
+  const pct=window.scrollY/(document.body.scrollHeight-window.innerHeight)*100;
+  document.getElementById('progress-bar').style.width=pct+'%';
+  document.body.classList.toggle('scrolled',window.scrollY>50);
+});
+
+/* ══ TOAST ══ */
+let toastT;
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className=type==='xp'?'xp':'';
+  t.classList.add('show');clearTimeout(toastT);
+  toastT=setTimeout(()=>t.classList.remove('show'),type==='xp'?3000:2500);
+}
+
+/* ══ HIGHLIGHT ══ */
+function hl(text,q){if(!q)return text;return text.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),'<mark>$1</mark>');}
+
+/* ══ RENDER ══ */
+let currentFilter='all',currentQuery='';
+
+function buildQuizCard(it,i){
+  const typeLabel={mcq:'QCM',tf:'Vrai/Faux',fill:'À compléter'}[it.type]||it.type;
+  const typeClass={mcq:'qtype-mcq',tf:'qtype-tf',fill:'qtype-fill'}[it.type]||'';
+  let bodyHTML='';
+  if(it.type==='mcq'){
+    const opts=it.options.map((o,j)=>`<button class="mcq-opt" data-correct="${j===it.correct?1:0}" onclick="handleMCQ(this.closest('.quiz-card'),this,${j===it.correct},${it.xp},'${it.explanation.replace(/'/g,"\\'")}')"><span class="opt-letter">${String.fromCharCode(65+j)}</span>${o}</button>`).join('');
+    bodyHTML=`<div class="mcq-options">${opts}</div>`;
+  }else if(it.type==='tf'){
+    bodyHTML=`<div class="tf-options"><button class="tf-btn true-btn" data-val="true" onclick="handleTF(this.closest('.quiz-card'),'true','${it.correct}',${it.xp},'${it.explanation.replace(/'/g,"\\'")}')">VRAI</button><button class="tf-btn false-btn" data-val="false" onclick="handleTF(this.closest('.quiz-card'),'false','${it.correct}',${it.xp},'${it.explanation.replace(/'/g,"\\'")}')">FAUX</button></div>`;
+  }else if(it.type==='fill'){
+    const ans=JSON.stringify(it.answers);
+    bodyHTML=`<div class="fill-area"><div class="fill-code">${it.codeTemplate}</div></div><div class="quiz-actions"><button class="quiz-submit-btn" onclick="handleFill(this.closest('.quiz-card'),${ans},${it.xp})">Valider</button><button class="quiz-reset-btn" onclick="resetQuiz(this.closest('.quiz-card'))">↺ Reset</button><span class="quiz-status"></span></div>`;
+  }
+  return `<div class="quiz-card" style="animation-delay:${i*.04}s"><div class="quiz-header"><span class="quiz-type-badge ${typeClass}">${typeLabel}</span><span class="quiz-title">${it.title}</span><span class="quiz-xp-tag">+${it.xp} XP</span></div><div class="quiz-body"><p class="quiz-question">${it.question}</p>${bodyHTML}${it.type==='mcq'||it.type==='tf'?'<div class="quiz-actions" style="margin-top:10px"><button class="quiz-reset-btn" onclick="resetQuiz(this.closest(\'.quiz-card\'))">↺ Reset</button><span class="quiz-status"></span></div>':''}<div class="quiz-feedback"></div></div></div>`;
+}
+
+function buildAvisSection(){
+  const avg=avisData.length?Math.round(avisData.reduce((a,r)=>a+r.rating,0)/avisData.length*10)/10:0;
+  const stars=n=>'⭐'.repeat(n)+'☆'.repeat(5-n);
+  const form=currentUser?`<div class="avis-form-card"><div class="avis-form-title">Laisse ton avis</div><div class="star-row">${[1,2,3,4,5].map(n=>`<button class="star-btn" onclick="setStars(${n})">⭐</button>`).join('')}</div><textarea class="avis-textarea" id="avis-text" placeholder="Ton avis (min 10 caractères)"></textarea><button class="avis-submit-btn" onclick="submitAvis()">ENVOYER</button></div>`:`<div class="avis-form-card"><div class="avis-login-prompt"><div style="font-size:24px;margin-bottom:8px">⭐</div><a onclick="document.getElementById('auth-overlay').classList.remove('hidden')" style="cursor:pointer;color:var(--accent)">Connecte-toi</a> pour laisser un avis</div></div>`;
+  const summary=avisData.length?`<div class="avis-card" style="text-align:center;padding:20px"><div style="font-family:'Orbitron',monospace;font-size:32px;color:var(--gold)">${avg}</div><div style="font-size:18px;margin:5px 0">${stars(Math.round(avg))}</div><div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">${avisData.length} avis</div></div>`:'';
+  const reviews=avisData.length?avisData.map(r=>`<div class="avis-card"><div class="avis-card-top"><div class="avis-avatar">${(r.username||'?')[0].toUpperCase()}</div><div class="avis-author">${r.username||'Anonyme'}</div><div class="avis-stars">${stars(r.rating)}</div><div class="avis-date">${new Date(r.created_at).toLocaleDateString('fr-FR')}</div></div><div class="avis-text">${r.text}</div></div>`).join(''):`<div class="avis-empty">Aucun avis pour l'instant. Sois le premier !</div>`;
+  return form+summary+reviews;
+}
+
+function renderAll(filter='all',query=''){
+  const mainEl=document.getElementById('main');
+  if(!mainEl)return;
+  mainEl.innerHTML='';let total=0;
+  const avisSection=DATA.find(d=>d.id==='avis');
+  if(avisSection)avisSection.items=avisData;
+
+  DATA.forEach(section=>{
+    if(filter!=='all'&&section.id!==filter)return;
+    let items=section.items;
+    if(section.type!=='avis'&&section.type!=='quiz'){
+      items=items.filter(it=>{
+        if(!query)return true;
+        const q=query.toLowerCase();
+        if(section.type==='formule')return it.name.toLowerCase().includes(q)||it.desc.toLowerCase().includes(q);
+        if(section.type==='erreur')return it.name.toLowerCase().includes(q)||it.explication.toLowerCase().includes(q);
+        if(section.type==='lecon')return it.title.toLowerCase().includes(q)||it.intro.toLowerCase().includes(q);
+        if(section.type==='projet')return it.title.toLowerCase().includes(q)||it.desc.toLowerCase().includes(q);
+        if(section.type==='application')return it.domaine.toLowerCase().includes(q)||it.description.toLowerCase().includes(q);
+        return(it.kw&&it.kw.toLowerCase().includes(q))||(it.def&&it.def.toLowerCase().includes(q))||(it.deep&&it.deep.toLowerCase().includes(q));
+      });
+    }
+    if(!items.length&&section.type!=='avis')return;
+    total+=items.length;
+
+    const sec=document.createElement('div');
+    sec.className=`section ${section.cls}`;
+    let html='',gridCls='cards-grid';
+
+    if(section.type==='formule'){
+      html=items.map((it,i)=>`<div class="formule-card" style="animation-delay:${i*.04}s"><div class="formule-name">${hl(it.name,query)}</div><div class="formule-syntax">${it.syntax}</div><div class="formule-desc">${it.desc}</div></div>`).join('');
+    }else if(section.type==='lecon'){
+      gridCls='lecons-grid';
+      html=items.map((it,i)=>{
+        const secs=it.sections.map(s=>`<div class="lecon-section"><h4>${s.h}</h4><p class="lecon-text">${s.text}</p><div class="lecon-code">${s.code}</div></div>`).join('');
+        return `<div class="lecon-card" style="animation-delay:${i*.06}s"><div class="lecon-header"><div class="lecon-num">LEÇON ${it.num}</div><div class="lecon-title">${it.title}</div></div><div class="lecon-body"><div class="lecon-intro">${it.intro}</div>${secs}<div class="lecon-tip">${it.tip}</div></div></div>`;
+      }).join('');
+    }else if(section.type==='erreur'){
+      gridCls='erreurs-grid';
+      html=items.map((it,i)=>`<div class="erreur-card" style="animation-delay:${i*.04}s"><div class="erreur-name">❌ ${it.name}</div><div style="font-family:'Space Mono',monospace;font-size:8px;color:var(--red);letter-spacing:2px;margin-bottom:4px">MAL</div><div class="erreur-bad">${it.bad}</div><div style="font-family:'Space Mono',monospace;font-size:8px;color:var(--green);letter-spacing:2px;margin-bottom:4px">BIEN</div><div class="erreur-good">${it.good}</div><div class="erreur-explication">${it.explication}</div></div>`).join('');
+    }else if(section.type==='projet'){
+      gridCls='projets-grid';
+      html=items.map((it,i)=>{const lc=it.level==='DÉBUTANT'?'var(--green)':it.level==='INTERMÉDIAIRE'?'var(--gold)':'var(--red)';return`<div class="projet-card" style="animation-delay:${i*.06}s"><div class="projet-header"><div class="projet-level" style="color:${lc}">${it.level}</div><div class="projet-title">${it.num}. ${it.title}</div></div><div class="projet-body"><p class="projet-desc">${it.desc}</p><div class="projet-skills">${it.skills.map(s=>`<span class="skill-tag">${s}</span>`).join('')}</div><ol class="projet-steps">${it.steps.map(s=>`<li>${s}</li>`).join('')}</ol></div></div>`;}).join('');
+    }else if(section.type==='application'){
+      gridCls='app-grid';
+      html=items.map((it,i)=>`<div class="app-card" style="animation-delay:${i*.05}s;border-color:${it.couleur}33"><div class="app-header" style="background:${it.couleur}0f"><div class="app-domaine" style="color:${it.couleur}">${it.domaine}</div><div class="app-desc">${it.description}</div></div><div class="app-body"><div class="app-modules">${it.modules.map(m=>`<span class="app-module-tag">${m}</span>`).join('')}</div><div class="app-exemples-title">Projets possibles</div><div class="app-exemples">${it.exemples.map(e=>`<span class="app-ex-tag">${e}</span>`).join('')}</div><div class="app-snippet">${it.snippet}</div></div></div>`).join('');
+    }else if(section.type==='quiz'){
+      gridCls='quiz-grid';
+      html=items.map((it,i)=>buildQuizCard(it,i)).join('');
+    }else if(section.type==='avis'){
+      gridCls='avis-grid';
+      html=buildAvisSection();
+    }else{
+      html=items.map((it,i)=>{
+        const kwH=hl(it.kw,query),defH=hl(it.def,query);
+        const badge=it.badge?`<span class="badge" style="background:${(it.badgeColor||'#333')}22;color:${it.badgeColor||'#888'};border:1px solid ${(it.badgeColor||'#555')}44">${it.badge}</span>`:'';
+        const deep=it.deep?`<div class="card-deep">${it.deep}</div><button class="expand-btn" onclick="toggleCard(this)">⊕ Approfondir</button>`:'';
+        return`<div class="card" style="animation-delay:${i*.04}s"><div class="card-keyword">${kwH}${badge}</div><div class="card-def">${defH}</div>${deep}<div class="card-example">${it.code}</div></div>`;
+      }).join('');
+    }
+
+    sec.innerHTML=`<div class="section-header"><div class="section-icon">${section.icon}</div><div class="section-title">${section.label}</div><div class="section-count">${items.length} entrée${items.length!==1?'s':''}</div></div><div class="${gridCls}">${html}</div>`;
+    mainEl.appendChild(sec);
+  });
+
+  const cnt=document.getElementById('search-count');
+  if(query){cnt.textContent=`${total} résultat${total!==1?'s':''}`;cnt.className=total>0?'has-results':''}
+  else{cnt.textContent='';cnt.className='';}
+  const fc=document.getElementById('footer-count');if(fc)fc.textContent=total+' entrées';
+  const st=document.getElementById('stat-terms');if(st)st.textContent=DATA.reduce((a,s)=>a+(s.type==='avis'?0:s.items.length),0)+' entrées';
+  if(!total&&query&&mainEl)mainEl.innerHTML=`<div class="empty"><div class="empty-icon">⌀</div><p>Aucun résultat pour "<strong>${query}</strong>"</p></div>`;
+}
+
+/* ══ INTERACTIVE ══ */
+function toggleCard(btn){const c=btn.closest('.card');const e=c.classList.toggle('expanded');btn.textContent=e?'⊖ Réduire':'⊕ Approfondir';}
+
+/* ══ EVENTS ══ */
+document.querySelectorAll('.pill').forEach(pill=>{
+  pill.addEventListener('click',()=>{
+    document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+    pill.classList.add('active');
+    currentFilter=pill.dataset.filter;
+    renderAll(currentFilter,currentQuery);
+    if(pill.dataset.filter==='avis')loadAvis();
+  });
+});
+
+const searchEl=document.getElementById('search');
+const clearBtn=document.getElementById('clear-btn');
+if(searchEl)searchEl.addEventListener('input',e=>{currentQuery=e.target.value.trim();clearBtn.classList.toggle('visible',currentQuery.length>0);renderAll(currentFilter,currentQuery);clearTimeout(membresSearchTimeout);membresSearchTimeout=setTimeout(()=>searchMembres(currentQuery),400);});
+if(clearBtn)clearBtn.addEventListener('click',()=>{searchEl.value='';currentQuery='';clearBtn.classList.remove('visible');searchEl.focus();renderAll(currentFilter,'');document.getElementById('membres-suggestions')?.remove();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='/'&&document.activeElement!==searchEl&&document.activeElement.tagName!=='INPUT'&&document.activeElement.tagName!=='TEXTAREA'){e.preventDefault();if(searchEl)searchEl.focus();}
+  if(e.key==='Escape'){
+    if(searchEl&&document.activeElement===searchEl){searchEl.blur();if(clearBtn)clearBtn.click();}
+    document.getElementById('pp-edit-modal')?.classList.add('hidden');
+    closeAdminPanel();
+    closeMembres();
+  }
+  if(e.key==='Tab'&&e.target.classList.contains('code-editor')){e.preventDefault();const s=e.target.selectionStart;e.target.value=e.target.value.substring(0,s)+'    '+e.target.value.substring(e.target.selectionEnd);e.target.selectionStart=e.target.selectionEnd=s+4;}
+});
+
+
+/* ══════════════════════════════════════════════
+   ADMIN SYSTEM
+══════════════════════════════════════════════ */
+function isAdmin(){
+  return !!currentUser && !!OWNER_ADMIN_USER_ID && currentUser.id===OWNER_ADMIN_USER_ID;
+}
+
+/* ══════════════════════════════════════════════
+   MEMBRES PAGE
+══════════════════════════════════════════════ */
+async function showMembres(){
+  const overlay=document.getElementById('membres-overlay');
+  overlay.classList.remove('hidden');
+  const list=document.getElementById('membres-list');
+  list.innerHTML='<div style="color:var(--muted);text-align:center;padding:20px">Chargement…</div>';
+  const {data}=await sb.from('profiles').select('username,xp,exercises_done,avatar_url').order('xp',{ascending:false}).limit(50);
+  if(!data||!data.length){list.innerHTML='<div style="color:var(--muted);text-align:center;padding:20px">Aucun membre</div>';return;}
+  list.innerHTML=data.map((m,i)=>{
+    const lv=getLevel(m.xp);
+    const av=m.avatar_url?`<img src="${m.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:`<span style="font-family:'Orbitron',monospace;font-size:12px">${(m.username||'?')[0].toUpperCase()}</span>`;
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':`<span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">#${i+1}</span>`;
+    return`<div class="membre-card" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer" onclick="closeMembres()">
+      <div style="width:28px;text-align:center">${medal}</div>
+      <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${av}</div>
+      <div style="flex:1">
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:white">${m.username}</div>
+        <div style="font-size:10px;color:${lv.color};font-family:'Space Mono',monospace">${lv.icon} ${lv.name}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Orbitron',monospace;font-size:12px;color:var(--gold)">${m.xp} XP</div>
+        <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${m.exercises_done||0} quiz</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function closeMembres(){document.getElementById('membres-overlay').classList.add('hidden');}
+
+/* Search membres depuis la barre de recherche */
+let membresSearchTimeout=null;
+async function searchMembres(query){
+  if(!query||query.length<2)return;
+  const {data}=await sb.from('profiles').select('username,xp').ilike('username','%'+query+'%').limit(5);
+  const existing=document.getElementById('membres-suggestions');
+  if(existing)existing.remove();
+  if(!data||!data.length)return;
+  const wrap=document.getElementById('search')?.parentElement;
+  if(!wrap)return;
+  const sug=document.createElement('div');
+  sug.id='membres-suggestions';
+  sug.style.cssText='position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:0 0 8px 8px;z-index:500;overflow:hidden';
+  sug.innerHTML=data.map(m=>{
+    const lv=getLevel(m.xp);
+    return`<div style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)" onmousedown="event.preventDefault()" onclick="document.getElementById('membres-suggestions')?.remove();searchEl.value='';currentQuery='';renderAll();">
+      <span style="font-size:14px">${lv.icon}</span>
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:white">@${m.username}</span>
+      <span style="margin-left:auto;font-family:'Orbitron',monospace;font-size:10px;color:var(--gold)">${m.xp} XP</span>
+    </div>`;
+  }).join('');
+  wrap.style.position='relative';
+  wrap.appendChild(sug);
+}
+
+/* ══ XP BOOST LEADERBOARD ══ */
+async function giveXPBoostTop(){
+  if(!isAdmin()){showToast('⛔ Admin seulement');return;}
+  const {data}=await sb.from('profiles').select('id,username,xp').order('xp',{ascending:false}).limit(3);
+  if(!data)return;
+  const boosts=[200,100,50];
+  for(let i=0;i<data.length;i++){
+    await sb.from('profiles').update({xp:data[i].xp+boosts[i]}).eq('id',data[i].id);
+  }
+  showToast('🏆 Boosts XP envoyés au top 3 !');
+}
+
+/* ══ ADMIN PANEL ══ */
+function openAdminPanel(){
+  if(!isAdmin()){showToast('⛔ Accès refusé');return;}
+  document.getElementById('admin-overlay').classList.remove('hidden');
+}
+function closeAdminPanel(){document.getElementById('admin-overlay').classList.add('hidden');}
+
+async function adminDeleteAvis(id){
+  if(!isAdmin())return;
+  const {error}=await sb.from('avis').delete().eq('id',id);
+  if(error){showToast('Erreur suppression avis: '+error.message);return;}
+  showToast('🗑️ Avis supprimé');
+  await loadAvis();
+  await loadAdminAvis();
+}
+async function adminBanUser(username){
+  if(!isAdmin())return;
+  if(!username){showToast('Entre un username');return;}
+  const reason=prompt('Raison du ban ?');
+  if(!reason)return;
+  const {error}=await sb.from('profiles').update({banned:true,ban_reason:reason}).eq('username',username);
+  if(error){showToast('Erreur ban: '+error.message);return;}
+  showToast('🔨 '+username+' banni');
+}
+async function adminUnbanUser(username){
+  if(!isAdmin())return;
+  if(!username){showToast('Entre un username');return;}
+  const {error}=await sb.from('profiles').update({banned:false,ban_reason:null}).eq('username',username);
+  if(error){showToast('Erreur unban: '+error.message);return;}
+  showToast('✅ '+username+' débanni');
+}
+async function adminGiveXP(username){
+  if(!isAdmin())return;
+  if(!username){showToast('Entre un username');return;}
+  const amount=parseInt(prompt('XP à donner ?'));
+  if(!amount)return;
+  const {data,error:getErr}=await sb.from('profiles').select('id,xp').eq('username',username).single();
+  if(getErr||!data){showToast('Utilisateur introuvable');return;}
+  const {error}=await sb.from('profiles').update({xp:data.xp+amount}).eq('id',data.id);
+  if(error){showToast('Erreur XP: '+error.message);return;}
+  showToast('✅ +'+amount+' XP à '+username);
+}
+async function adminDeleteUser(username){
+  if(!isAdmin())return;
+  if(!username){showToast('Entre un username');return;}
+  const ok=confirm('Supprimer complètement le compte @'+username+' ? Cette action est irréversible.');
+  if(!ok)return;
+  const {error}=await sb.rpc('admin_delete_user_by_username',{p_username:username});
+  if(error){showToast('Erreur suppression compte: '+error.message);return;}
+  showToast('🧹 Compte @'+username+' supprimé');
+}
+
+
+async function loadAdminAvis(){
+  if(!isAdmin())return;
+  const {data}=await sb.from('avis').select('*').order('created_at',{ascending:false}).limit(20);
+  const el=document.getElementById('admin-avis-list');
+  if(!el)return;
+  if(!data||!data.length){el.innerHTML='<div style="padding:12px;color:var(--muted);font-size:12px">Aucun avis</div>';return;}
+  el.innerHTML=data.map(a=>`<div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+    <div style="flex:1"><span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--accent)">@${a.username}</span> <span style="font-size:10px;color:var(--muted)">${a.text.substring(0,60)}…</span></div>
+    <button onclick="adminDeleteAvis(${a.id})" style="background:rgba(255,60,90,.2);border:1px solid var(--red);border-radius:4px;color:var(--red);font-size:10px;padding:3px 8px;cursor:pointer">🗑️</button>
+  </div>`).join('');
+}
+
+/* ══ INIT ══ */
+showPage('home');
+loadAvis().then(()=>renderAll());
+setTimeout(()=>showToast('// Memento Mori — Python Dico · by Ace'),600);
+</script>
+
+<!-- MEMBRES OVERLAY -->
+<div id="membres-overlay" class="hidden" style="position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center;background:rgba(2,5,16,.85)">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:14px;width:min(480px,95vw);max-height:80vh;overflow:hidden;display:flex;flex-direction:column">
+    <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div style="font-family:'Orbitron',monospace;font-size:14px;color:white">🏆 CLASSEMENT</div>
+      <button onclick="closeMembres()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div id="membres-list" style="overflow-y:auto;flex:1"></div>
+  </div>
+</div>
+
+<!-- ADMIN OVERLAY -->
+<div id="admin-overlay" class="hidden" style="position:fixed;inset:0;z-index:700;display:flex;align-items:center;justify-content:center;background:rgba(2,5,16,.9)">
+  <div style="background:var(--surface);border:1px solid var(--red);border-radius:14px;width:min(500px,95vw);max-height:85vh;overflow-y:auto;padding:24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-family:'Orbitron',monospace;font-size:15px;color:var(--red)">⚙️ ADMIN PANEL</div>
+      <button onclick="closeAdminPanel()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px">ACTIONS RAPIDES</div>
+      <button onclick="giveXPBoostTop()" style="background:linear-gradient(135deg,var(--gold),#b8860b);border:none;border-radius:8px;padding:12px;color:#000;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;cursor:pointer">🏆 DONNER BOOST XP TOP 3</button>
+      <div style="margin-top:8px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px">GESTION UTILISATEUR</div>
+      <div style="display:flex;gap:8px">
+        <input id="admin-username-input" type="text" placeholder="@username" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'Space Mono',monospace;font-size:11px;outline:none">
+        <button onclick="adminGiveXP(document.getElementById('admin-username-input').value.trim())" style="background:linear-gradient(135deg,var(--green),#00b876);border:none;border-radius:6px;padding:9px 14px;color:#000;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;cursor:pointer">+XP</button>
+        <button onclick="adminBanUser(document.getElementById('admin-username-input').value.trim())" style="background:linear-gradient(135deg,var(--red),#cc2040);border:none;border-radius:6px;padding:9px 14px;color:white;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;cursor:pointer">BAN</button>
+        <button onclick="adminUnbanUser(document.getElementById('admin-username-input').value.trim())" style="background:linear-gradient(135deg,var(--accent2),#1f6fb1);border:none;border-radius:6px;padding:9px 14px;color:#001827;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;cursor:pointer">UNBAN</button>
+      </div>
+      <button onclick="adminDeleteUser(document.getElementById('admin-username-input').value.trim())" style="background:linear-gradient(135deg,#ff6a00,#ff3c5a);border:none;border-radius:8px;padding:10px 14px;color:white;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;cursor:pointer">SUPPRIMER COMPTE</button>
+      <div id="admin-help" style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);line-height:1.6">Si ban/suppression ne marchent pas: ajoute la fonction SQL admin dans Supabase (je te donne le script).</div>
+      <div style="margin-top:8px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px">AVIS RÉCENTS</div>
+      <div id="admin-avis-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px"></div>
+      <button onclick="loadAdminAvis()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-family:'Space Mono',monospace;font-size:9px;cursor:pointer">↺ CHARGER AVIS</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
