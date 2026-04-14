@@ -282,6 +282,7 @@ main{padding:32px 24px 100px;max-width:1500px;position:relative;z-index:10}
 .fill-code{background:var(--code-bg);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:12px 14px;font-family:'Space Mono',monospace;font-size:11px;color:#80b8e8;line-height:1.9;white-space:pre-wrap;overflow-x:auto;margin-bottom:8px}
 .fill-code .cmt{color:var(--muted)}.fill-code .kw{color:var(--accent);font-weight:bold}.fill-code .fn{color:var(--teal)}.fill-code .str{color:#f7c96a}.fill-code .num{color:#ff9d5c}
 .fill-code .blank{display:inline-block;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.4);border-radius:3px;min-width:60px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;color:var(--gold);outline:none;transition:all .2s}
+.fill-code input.blank{width:72px;min-width:72px;height:22px;line-height:20px;vertical-align:middle;text-align:center;caret-color:var(--gold);appearance:none}
 .fill-code .blank:focus{border-color:var(--gold);background:rgba(255,215,0,.15)}
 .fill-code .blank.correct{border-color:var(--green)!important;background:rgba(0,229,150,.15)!important;color:var(--green)!important}
 .fill-code .blank.wrong{border-color:var(--red)!important;background:rgba(255,60,90,.12)!important;color:var(--red)!important}
@@ -1681,7 +1682,8 @@ function buildQuizCard(it,i){
     bodyHTML=`<div class="tf-options"><button class="tf-btn true-btn" data-val="true" onclick="handleTF(this.closest('.quiz-card'),'true','${it.correct}',${it.xp},'${it.explanation.replace(/'/g,"\\'")}')">VRAI</button><button class="tf-btn false-btn" data-val="false" onclick="handleTF(this.closest('.quiz-card'),'false','${it.correct}',${it.xp},'${it.explanation.replace(/'/g,"\\'")}')">FAUX</button></div>`;
   }else if(it.type==='fill'){
     const ans=JSON.stringify(it.answers);
-    bodyHTML=`<div class="fill-area"><div class="fill-code">${it.codeTemplate}</div></div><div class="quiz-actions"><button class="quiz-submit-btn" onclick="handleFill(this.closest('.quiz-card'),${ans},${it.xp})">Valider</button><button class="quiz-reset-btn" onclick="resetQuiz(this.closest('.quiz-card'))">↺ Reset</button><span class="quiz-status"></span></div>`;
+    const editableTemplate=it.codeTemplate.replace(/<span class="blank"([^>]*)><\/span>/g,'<input class="blank"$1 type="text" />');
+    bodyHTML=`<div class="fill-area"><div class="fill-code">${editableTemplate}</div></div><div class="quiz-actions"><button class="quiz-submit-btn" onclick="handleFill(this.closest('.quiz-card'),${ans},${it.xp})">Valider</button><button class="quiz-reset-btn" onclick="resetQuiz(this.closest('.quiz-card'))">↺ Reset</button><span class="quiz-status"></span></div>`;
   }
   return `<div class="quiz-card" style="animation-delay:${i*.04}s"><div class="quiz-header"><span class="quiz-type-badge ${typeClass}">${typeLabel}</span><span class="quiz-title">${it.title}</span><span class="quiz-xp-tag">+${it.xp} XP</span></div><div class="quiz-body"><p class="quiz-question">${it.question}</p>${bodyHTML}${it.type==='mcq'||it.type==='tf'?'<div class="quiz-actions" style="margin-top:10px"><button class="quiz-reset-btn" onclick="resetQuiz(this.closest(\'.quiz-card\'))">↺ Reset</button><span class="quiz-status"></span></div>':''}<div class="quiz-feedback"></div></div></div>`;
 }
