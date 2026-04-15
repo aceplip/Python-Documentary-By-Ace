@@ -60,31 +60,34 @@ body.scrolled #persona-bg{opacity:.09}
 
 /* —— THEME SWITCHER —— */
 #theme-switcher{
-  position:fixed;right:16px;bottom:20px;z-index:330;
+  position:fixed;right:16px;bottom:20px;z-index:360;
   background:rgba(10,22,40,.88);border:1px solid var(--border2);
-  border-radius:12px;padding:10px 12px;backdrop-filter:blur(10px);
+  border-radius:12px;padding:12px 14px;backdrop-filter:blur(10px);
   display:flex;align-items:center;gap:10px;
   box-shadow:0 8px 26px rgba(0,0,0,.35);
 }
 #theme-switcher label{
-  font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);
+  font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);
   letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap;
+  cursor:pointer;user-select:none;
 }
 #theme-select{
   background:var(--surface2);border:1px solid var(--border);
-  border-radius:8px;padding:10px 32px 10px 12px;color:var(--text);
-  font-family:'Space Mono',monospace;font-size:12px;outline:none;
-  min-height:42px;min-width:170px;cursor:pointer;
+  border-radius:8px;padding:12px 36px 12px 14px;color:var(--text);
+  font-family:'Space Mono',monospace;font-size:13px;outline:none;
+  min-height:50px;min-width:230px;cursor:pointer;
   line-height:1.2;
+  touch-action:manipulation;
 }
+#theme-select option{font-size:13px}
 #theme-select:hover{border-color:var(--accent)}
 #theme-select:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(0,207,255,.2)}
 @media(max-width:700px){
   #theme-switcher{
-    left:10px;right:10px;bottom:10px;justify-content:space-between;gap:12px;
+    left:10px;right:10px;bottom:10px;justify-content:space-between;gap:10px;
   }
   #theme-select{
-    flex:1;min-width:0;min-height:44px;
+    flex:1;min-width:0;min-height:52px;
   }
 }
 
@@ -714,12 +717,12 @@ footer a:hover{color:var(--accent)}
 
 /* Top nav tab for profile */
 .main-nav-tab{
-  position:fixed;top:10px;left:50%;
-  transform:translateX(calc(-50% + clamp(115px,10vw,220px)));
+  position:fixed;top:10px;right:260px;left:auto;
+  transform:none;
   z-index:200;display:flex;align-items:center;gap:0;
   background:rgba(10,22,40,.85);border:1px solid var(--border2);
   border-radius:8px;overflow:hidden;backdrop-filter:blur(8px);
-  max-width:calc(100vw - 340px);
+  max-width:320px;
 }
 .main-nav-btn{
   font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1.5px;
@@ -735,10 +738,19 @@ footer a:hover{color:var(--accent)}
   .main-nav-btn{padding:7px 13px;font-size:8px;letter-spacing:1px}
 }
 
+@media(max-width:1280px){
+  .main-nav-tab{right:220px}
+}
+
+@media(max-width:1080px){
+  .main-nav-tab{right:170px}
+}
+
 @media(max-width:900px){
   .main-nav-tab{
     left:50%;
     top:8px;
+    right:auto;
     transform:translateX(-50%);
     max-width:calc(100vw - 140px);
   }
