@@ -84,7 +84,8 @@ body.scrolled #persona-bg{opacity:.09}
 /* ══════════════════════════════════
    USER PROFILE BAR (top-left when logged in)
 ══════════════════════════════════ */
-#user-bar{position:fixed;top:10px;left:16px;z-index:300;display:flex;align-items:center;gap:10px;background:rgba(10,22,40,.85);border:1px solid var(--border2);border-radius:10px;padding:6px 12px;backdrop-filter:blur(8px);cursor:pointer;transition:all .2s;max-width:calc(100vw - 120px)}
+#user-bar{position:fixed;top:10px;right:150px;z-index:300;display:flex;align-items:center;gap:10px;background:rgba(10,22,40,.85);border:1px solid var(--border2);border-radius:10px;padding:6px 12px;backdrop-filter:blur(8px);cursor:pointer;transition:all .2s;max-width:220px}
+@media(max-width:700px){#user-bar{right:auto;left:16px;max-width:calc(100vw - 120px)}}
 #user-bar:hover{border-color:var(--accent2)}
 #user-bar.hidden{display:none}
 .ubar-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:white;flex-shrink:0}
@@ -1325,56 +1326,69 @@ async function submitAvis(){
 function handleMCQ(card,optEl,isCorrect,xp,explanation){
   if(card.dataset.done)return;
   card.dataset.done='1';
-  card.querySelectorAll('.mcq-opt').forEach(o=>{o.disabled=true;if(o.dataset.correct==='1')o.classList.add('correct');});
+  card.querySelectorAll('.mcq-opt').forEach(o=>{
+    o.disabled=true;
+    if(o.dataset.correct==='1')o.classList.add('correct');
+  });
   if(!isCorrect)optEl.classList.add('wrong');
   const fb=card.querySelector('.quiz-feedback');
-  fb.textContent=isCorrect?'✅ Correct ! '+explanation:'❌ '+explanation;
-  fb.className='quiz-feedback '+(isCorrect?'correct':'wrong');
+  if(fb){fb.innerHTML=`<span>${isCorrect?'✅ Correct !':'❌ Incorrect.'}</span> ${explanation}`;fb.className='quiz-feedback '+(isCorrect?'correct':'wrong');}
   const st=card.querySelector('.quiz-status');
-  if(st){st.textContent=isCorrect?'✅ Réussi':'❌ Raté';st.className='quiz-status done';}
+  if(st){st.textContent=isCorrect?'✅':'❌';st.className='quiz-status done';}
   if(isCorrect)awardXP(xp,'QCM réussi');
+  // marque daily si applicable
+  _markDailyIfApplicable(card);
 }
 function handleTF(card,chosen,correct,xp,explanation){
   if(card.dataset.done)return;
   card.dataset.done='1';
-  card.querySelectorAll('.tf-btn').forEach(b=>b.disabled=true);
   const isCorrect=chosen===correct;
-  card.querySelector(`.tf-btn[data-val="${correct}"]`).classList.add('correct');
-  if(!isCorrect)card.querySelector(`.tf-btn[data-val="${chosen}"]`).classList.add('wrong');
-  const fb=card.querySelector('.quiz-feedback');
-  fb.textContent=isCorrect?'✅ Exact ! '+explanation:'❌ Réponse : '+correct+'. '+explanation;
-  fb.className='quiz-feedback '+(isCorrect?'correct':'wrong');
-  const st=card.querySelector('.quiz-status');
-  if(st){st.textContent=isCorrect?'✅ Réussi':'❌ Raté';st.className='quiz-status done';}
-  if(isCorrect)awardXP(xp,'Vrai/Faux réussi');
-}
-function handleFill(card,answers,xp){
-  const blanks=card.querySelectorAll('.blank');
-  let allOk=true;
-  blanks.forEach((b,i)=>{
-    const val=(b.value!==undefined?b.value:b.textContent).trim().toLowerCase();
-    const ok=answers[i].toLowerCase().split('|').includes(val);
-    b.classList.toggle('correct',ok);b.classList.toggle('wrong',!ok);
-    if(b.tagName==='INPUT')b.disabled=true;
-    if(!ok)allOk=false;
+  card.querySelectorAll('.tf-btn').forEach(b=>{
+    b.disabled=true;
+    if(b.dataset.val===correct)b.classList.add('correct');
+    else if(b.dataset.val===chosen&&!isCorrect)b.classList.add('wrong');
   });
   const fb=card.querySelector('.quiz-feedback');
-  fb.textContent=allOk?'✅ Parfait !':'❌ Certaines réponses sont incorrectes.';
-  fb.className='quiz-feedback '+(allOk?'correct':'wrong');
-  if(!card.dataset.done){
-    card.dataset.done='1';
-    const st=card.querySelector('.quiz-status');
-    if(st){st.textContent=allOk?'✅ Réussi':'❌ Raté';st.className='quiz-status done';}
-    if(allOk)awardXP(xp,'Complétion réussie');
-  }
+  if(fb){fb.innerHTML=`<span>${isCorrect?'✅ Exact !':'❌ Réponse : '+(correct==='true'?'VRAI':'FAUX')+'.'}</span> ${explanation}`;fb.className='quiz-feedback '+(isCorrect?'correct':'wrong');}
+  const st=card.querySelector('.quiz-status');
+  if(st){st.textContent=isCorrect?'✅':'❌';st.className='quiz-status done';}
+  if(isCorrect)awardXP(xp,'Vrai/Faux réussi');
+  _markDailyIfApplicable(card);
+}
+function handleFill(card,answers,xp){
+  if(card.dataset.done)return;
+  card.dataset.done='1';
+  const blanks=card.querySelectorAll('input.blank');
+  let allOk=true;
+  blanks.forEach((b,i)=>{
+    const accepted=(answers[i]||'').toLowerCase().split('|');
+    const ok=accepted.includes(b.value.trim().toLowerCase());
+    b.classList.toggle('correct',ok);
+    b.classList.toggle('wrong',!ok);
+    b.disabled=true;
+    if(!ok)allOk=false;
+  });
+  card.querySelectorAll('.quiz-submit-btn').forEach(b=>b.disabled=true);
+  const fb=card.querySelector('.quiz-feedback');
+  if(fb){fb.innerHTML=allOk?'✅ Parfait ! Toutes les réponses sont correctes.':'❌ Certaines réponses sont incorrectes. Clique sur reset pour réessayer.';fb.className='quiz-feedback '+(allOk?'correct':'wrong');}
+  const st=card.querySelector('.quiz-status');
+  if(st){st.textContent=allOk?'✅':'❌';st.className='quiz-status done';}
+  if(allOk)awardXP(xp,'Complétion réussie');
+  _markDailyIfApplicable(card);
 }
 function resetQuiz(card){
-  card.dataset.done='';
-  card.querySelectorAll('.mcq-opt').forEach(o=>{o.disabled=false;o.classList.remove('correct','wrong');});
-  card.querySelectorAll('.tf-btn').forEach(b=>{b.disabled=false;b.classList.remove('correct','wrong');});
-  card.querySelectorAll('.blank').forEach(b=>{b.value='';b.disabled=false;b.classList.remove('correct','wrong');});
-  const fb=card.querySelector('.quiz-feedback');if(fb){fb.className='quiz-feedback';fb.textContent='';}
+  delete card.dataset.done;
+  card.querySelectorAll('.mcq-opt').forEach(o=>{o.disabled=false;o.classList.remove('correct','wrong');o.style.background='';o.style.borderColor='';});
+  card.querySelectorAll('.tf-btn').forEach(b=>{b.disabled=false;b.classList.remove('correct','wrong');b.style.background='';b.style.borderColor='';});
+  card.querySelectorAll('input.blank').forEach(b=>{b.value='';b.disabled=false;b.classList.remove('correct','wrong');b.style.borderColor='';b.style.background='';});
+  card.querySelectorAll('button').forEach(b=>b.disabled=false);
+  const fb=card.querySelector('.quiz-feedback');if(fb){fb.className='quiz-feedback';fb.innerHTML='';}
   const st=card.querySelector('.quiz-status');if(st){st.className='quiz-status';st.textContent='';}
+}
+function _markDailyIfApplicable(card){
+  if(card.classList.contains('daily-card')&&card.dataset.dailyKey){
+    localStorage.setItem(card.dataset.dailyKey,'1');
+  }
 }
 
 /* ══ DATA ══ */
@@ -1926,9 +1940,10 @@ async function openPublicProfile(username){
   if(!overlay||!body)return;
   overlay.classList.remove('hidden');
   body.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">Chargement…</div>';
-  const {data,error}=await sb.from('profiles').select('username,xp,exercises_done,streak,bio,avatar_url,banner_url,banned').eq('username',username).maybeSingle();
+  const {data,error}=await sb.from('profiles').select('id,username,xp,exercises_done,streak,bio,avatar_url,banner_url,banned').eq('username',username).maybeSingle();
   if(error||!data){body.innerHTML='<div style="padding:20px;color:var(--red);text-align:center">Profil introuvable</div>';return;}
   const lv=getLevel(data.xp||0);
+  const isTargetAdmin = data.id === OWNER_ADMIN_USER_ID;
   const avatar=data.avatar_url?`<img src="${data.avatar_url}" style="width:100%;height:100%;object-fit:cover">`:`${(data.username||'?')[0].toUpperCase()}`;
   const bannerStyle=data.banner_url?`background-image:url('${data.banner_url}')`:'';
   body.innerHTML=`
@@ -1937,7 +1952,7 @@ async function openPublicProfile(username){
       <div class="public-profile-head">
         <div class="public-profile-avatar">${avatar}</div>
         <div>
-          <div class="public-profile-name">@${data.username}${data.banned?' <span class="admin-chip mini">BANNI</span>':''}</div>
+          <div class="public-profile-name">@${data.username}${data.banned?' <span class="admin-chip mini">BANNI</span>':''}${isTargetAdmin?' <span class="admin-chip mini">ADMIN</span>':''}</div>
           <div class="public-profile-meta">${lv.icon} ${lv.name} · ${data.xp||0} XP</div>
         </div>
       </div>
@@ -2124,118 +2139,13 @@ async function loadAdminAvis(){
   </div>`).join('');
 }
 
-/* ══════════════════════════════════════════════
-   QUIZ — FONCTIONS MANQUANTES (BUG FIX)
-══════════════════════════════════════════════ */
 
-/* Donne de l'XP au joueur connecté */
-async function awardXP(amount){
-  if(!currentUser||!userProfile)return;
-  const newXP=(userProfile.xp||0)+amount;
-  const newDone=(userProfile.exercises_done||0)+1;
-  await sb.from('profiles').update({xp:newXP,exercises_done:newDone}).eq('id',currentUser.id);
-  userProfile.xp=newXP;
-  userProfile.exercises_done=newDone;
-  updateUserBar();
-  checkBadges();
-  showToast(`+${amount} XP !`,'xp');
-}
-
-/* Vérifie et attribue les badges débloqués */
-async function checkBadges(){
-  if(!currentUser||!userProfile)return;
-  const earned=JSON.parse(localStorage.getItem('badges_'+currentUser.id)||'[]');
-  for(const b of BADGES){
-    if(!earned.includes(b.id)&&b.cond(userProfile)){
-      earned.push(b.id);
-      showToast('🏅 Badge débloqué : '+b.name,'xp');
-    }
-  }
-  localStorage.setItem('badges_'+currentUser.id,JSON.stringify(earned));
-}
-
-/* Désactive tous les boutons d'une carte quiz */
-function lockCard(card){
-  card.querySelectorAll('button.mcq-opt,button.tf-btn,button.quiz-submit-btn').forEach(b=>b.disabled=true);
-}
-
-/* Affiche le feedback */
-function showFeedback(card,correct,explanation){
-  const fb=card.querySelector('.quiz-feedback');
-  if(fb){
-    fb.innerHTML=`<div style="margin-top:10px;padding:10px 14px;border-radius:6px;font-size:13px;border:1px solid ${correct?'var(--green)':'var(--red)'};background:${correct?'rgba(0,229,150,.07)':'rgba(255,60,90,.07)'};color:${correct?'var(--green)':'var(--red)'}">
-      ${correct?'✅ Correct !':'❌ Incorrect.'} <span style="color:var(--text)">${explanation}</span>
-    </div>`;
-  }
-  const st=card.querySelector('.quiz-status');
-  if(st)st.textContent=correct?'✅':'❌';
-}
-
-/* QCM */
-function handleMCQ(card,btn,isCorrect,xp,explanation){
-  if(card.dataset.answered)return;
-  card.dataset.answered='1';
-  lockCard(card);
-  btn.style.background=isCorrect?'rgba(0,229,150,.18)':'rgba(255,60,90,.18)';
-  btn.style.borderColor=isCorrect?'var(--green)':'var(--red)';
-  // Révèle la bonne réponse si mauvaise
-  if(!isCorrect){
-    card.querySelectorAll('.mcq-opt').forEach(b=>{
-      if(b.dataset.correct==='1'){b.style.background='rgba(0,229,150,.18)';b.style.borderColor='var(--green)';}
-    });
-  }
-  showFeedback(card,isCorrect,explanation);
-  if(isCorrect)awardXP(xp);
-}
-
-/* Vrai/Faux */
-function handleTF(card,val,correct,xp,explanation){
-  if(card.dataset.answered)return;
-  card.dataset.answered='1';
-  lockCard(card);
-  const isCorrect=val===correct;
-  card.querySelectorAll('.tf-btn').forEach(b=>{
-    if(b.dataset.val===correct){b.style.background='rgba(0,229,150,.18)';b.style.borderColor='var(--green)';}
-    else if(b.dataset.val===val&&!isCorrect){b.style.background='rgba(255,60,90,.18)';b.style.borderColor='var(--red)';}
-  });
-  showFeedback(card,isCorrect,explanation);
-  if(isCorrect)awardXP(xp);
-}
-
-/* À compléter */
-function handleFill(card,answers,xp){
-  if(card.dataset.answered)return;
-  const inputs=card.querySelectorAll('input.blank');
-  let allCorrect=true;
-  inputs.forEach((inp,i)=>{
-    const acceptedRaw=answers[i]||'';
-    const accepted=acceptedRaw.split('|').map(a=>a.trim().toLowerCase());
-    const val=inp.value.trim().toLowerCase();
-    const ok=accepted.includes(val);
-    inp.style.borderColor=ok?'var(--green)':'var(--red)';
-    inp.style.background=ok?'rgba(0,229,150,.1)':'rgba(255,60,90,.1)';
-    if(!ok){allCorrect=false;inp.title='Attendu : '+acceptedRaw;}
-  });
-  card.dataset.answered='1';
-  lockCard(card);
-  const explanation=allCorrect?'Toutes les réponses sont correctes !':'Certaines réponses sont incorrectes — les bonnes valeurs sont affichées en survol.';
-  showFeedback(card,allCorrect,explanation);
-  if(allCorrect)awardXP(xp);
-}
-
-/* Reset une carte quiz */
-function resetQuiz(card){
-  delete card.dataset.answered;
-  card.querySelectorAll('input.blank').forEach(inp=>{inp.value='';inp.style.borderColor='';inp.style.background='';inp.disabled=false;});
-  card.querySelectorAll('button').forEach(b=>{b.disabled=false;b.style.background='';b.style.borderColor='';});
-  const fb=card.querySelector('.quiz-feedback');if(fb)fb.innerHTML='';
-  const st=card.querySelector('.quiz-status');if(st)st.textContent='';
-}
 
 /* ══════════════════════════════════════════════
    QUIZ ROTATIFS — évite la répétition XP
 ══════════════════════════════════════════════ */
 const QUIZ_EXTRA = [
+  /* ── Batch 1 (original 12) ── */
   {type:"mcq",title:"isinstance()",xp:15,question:"Que fait <code>isinstance(42, int)</code> ?",options:["Lève une erreur","Retourne True","Retourne 42","Retourne False"],correct:1,explanation:"isinstance() vérifie si un objet est d'un type donné. 42 est bien un int."},
   {type:"tf",title:"Pass et continue",xp:10,question:"<code>pass</code> et <code>continue</code> ont le même effet dans une boucle.",correct:"false",explanation:"pass ne fait rien du tout (placeholder), continue passe à l'itération suivante."},
   {type:"fill",title:"Lambda",xp:20,question:"Crée une fonction lambda qui double un nombre :",codeTemplate:`double = <span class="blank" data-idx="0"></span> x: x <span class="blank" data-idx="1"></span> 2`,answers:["lambda","*"]},
@@ -2244,14 +2154,89 @@ const QUIZ_EXTRA = [
   {type:"fill",title:"Dict comprehension",xp:25,question:"Complète pour créer {0:0, 1:1, 2:4, 3:9} :",codeTemplate:`carres = {x: <span class="blank" data-idx="0"></span> <span class="blank" data-idx="1"></span> x in range(4)}`,answers:["x**2","for"]},
   {type:"mcq",title:"*args",xp:15,question:"Que représente <code>*args</code> dans une fonction ?",options:["Un argument obligatoire","Un tuple d'arguments positionnels","Un dict d'arguments","Une liste de kwargs"],correct:1,explanation:"*args capture tous les arguments positionnels supplémentaires dans un tuple."},
   {type:"tf",title:"Strings immutables",xp:10,question:"On peut modifier un caractère d'une string avec <code>s[0] = 'X'</code>.",correct:"false",explanation:"Les strings sont immutables en Python. Il faut recréer une nouvelle string."},
-  {type:"fill",title:"global keyword",xp:20,question:"Complète pour modifier la variable globale depuis une fonction :",codeTemplate:`compteur = 0
-def incrementer():
-    <span class="blank" data-idx="0"></span> compteur
-    compteur <span class="blank" data-idx="1"></span> 1`,answers:["global","+="]},
+  {type:"fill",title:"global keyword",xp:20,question:"Complète pour modifier la variable globale depuis une fonction :",codeTemplate:`compteur = 0\ndef incrementer():\n    <span class="blank" data-idx="0"></span> compteur\n    compteur <span class="blank" data-idx="1"></span> 1`,answers:["global","+="]},
   {type:"mcq",title:"Décorateurs",xp:20,question:"Quelle syntaxe applique un décorateur <code>log</code> à une fonction <code>f</code> ?",options:["f = log(f)","@log avant def f","log(f)","f.decorator(log)"],correct:1,explanation:"@log est du sucre syntaxique pour f = log(f). Les deux sont équivalents."},
   {type:"tf",title:"list() vs []",xp:10,question:"<code>list()</code> et <code>[]</code> créent tous les deux une liste vide.",correct:"true",explanation:"Oui, les deux sont équivalents. [] est plus rapide car pas d'appel de fonction."},
-  {type:"fill",title:"open() écriture",xp:20,question:"Complète pour ouvrir un fichier en mode écriture :",codeTemplate:`with <span class="blank" data-idx="0"></span>("notes.txt", <span class="blank" data-idx="1"></span>) as f:
-    f.write("ok")`,answers:["open",'"w"']},
+  {type:"fill",title:"open() écriture",xp:20,question:"Complète pour ouvrir un fichier en mode écriture :",codeTemplate:`with <span class="blank" data-idx="0"></span>("notes.txt", <span class="blank" data-idx="1"></span>) as f:\n    f.write("ok")`,answers:["open",'"w"']},
+
+  /* ── Batch 2 — 60 nouvelles questions ── */
+  /* Bases */
+  {type:"mcq",title:"type() de True",xp:10,question:"Quel est le type de <code>True</code> en Python ?",options:["int","boolean","bool","str"],correct:2,explanation:"bool est le type de True et False en Python. bool hérite d'int : True == 1."},
+  {type:"tf",title:"Division entière",xp:10,question:"<code>7 // 2</code> retourne <code>3.5</code> en Python.",correct:"false",explanation:"// est la division entière. 7 // 2 = 3 (arrondi vers le bas). Pour 3.5 on utilise 7 / 2."},
+  {type:"fill",title:"Conversion de type",xp:15,question:"Convertis la string '42' en entier :",codeTemplate:`n = <span class="blank" data-idx="0"></span>(<span class="blank" data-idx="1"></span>)`,answers:["int","'42'|\"42\""]},
+  {type:"mcq",title:"Valeur de 2**10",xp:10,question:"Que vaut <code>2 ** 10</code> ?",options:["20","100","512","1024"],correct:3,explanation:"** est l'opérateur de puissance. 2^10 = 1024."},
+  {type:"tf",title:"0 est falsy",xp:10,question:"<code>0</code> est évalué comme <code>False</code> dans un if.",correct:"true",explanation:"0, None, '', [], {}, set() sont tous falsy. if 0: ne s'exécute jamais."},
+  {type:"fill",title:"Affichage multiple",xp:15,question:"Affiche 'Hello' et 'World' sur la même ligne séparés par un espace :",codeTemplate:`<span class="blank" data-idx="0"></span>("Hello", <span class="blank" data-idx="1"></span>)`,answers:["print","\"World\"|'World'"]},
+  {type:"mcq",title:"Opérateur modulo négatif",xp:15,question:"Que retourne <code>-7 % 3</code> en Python ?",options:["-1","1","2","-2"],correct:2,explanation:"En Python, % retourne toujours un résultat du même signe que le diviseur. -7 % 3 = 2 (car -7 = -3×3 + 2)."},
+  {type:"tf",title:"None == False",xp:10,question:"<code>None == False</code> retourne <code>True</code>.",correct:"false",explanation:"None == False retourne False. None est falsy mais n'est pas égal à False. bool(None) == False mais None != False."},
+  {type:"fill",title:"Valeur absolue",xp:15,question:"Obtiens la valeur absolue de -15 :",codeTemplate:`resultat = <span class="blank" data-idx="0"></span>(-<span class="blank" data-idx="1"></span>)`,answers:["abs","15"]},
+  {type:"mcq",title:"len() sur dict",xp:10,question:"Que retourne <code>len({'a':1, 'b':2, 'c':3})</code> ?",options:["6","3","0","2"],correct:1,explanation:"len() sur un dict retourne le nombre de paires clé-valeur. Ici 3 paires."},
+
+  /* Fonctions */
+  {type:"mcq",title:"Valeur par défaut mutable",xp:20,question:"Pourquoi éviter <code>def f(lst=[])</code> ?",options:["Syntax error","La liste est partagée entre appels","Trop lent","Python n'accepte pas les listes"],correct:1,explanation:"Les valeurs par défaut mutables sont créées une seule fois. Tous les appels partagent la même liste ! Utilise def f(lst=None): if lst is None: lst = []"},
+  {type:"fill",title:"**kwargs",xp:20,question:"Complète pour accepter des arguments nommés variables :",codeTemplate:`def afficher(<span class="blank" data-idx="0"></span>kwargs):\n    for k, v in kwargs.<span class="blank" data-idx="1"></span>():\n        print(k, v)`,answers:["**","items"]},
+  {type:"tf",title:"return None implicite",xp:10,question:"Une fonction sans <code>return</code> retourne <code>None</code> automatiquement.",correct:"true",explanation:"Oui, Python retourne None implicitement si aucun return n'est atteint."},
+  {type:"mcq",title:"Fonction récursive",xp:20,question:"Pour une fonction récursive, qu'est-ce qui est indispensable ?",options:["Une boucle while","Un cas de base (condition d'arrêt)","Une variable globale","Un import"],correct:1,explanation:"Sans cas de base, la récursion est infinie et lève RecursionError. Le cas de base arrête la récursion."},
+  {type:"fill",title:"map()",xp:20,question:"Applique la fonction <code>str</code> à chaque élément de la liste :",codeTemplate:`resultat = list(<span class="blank" data-idx="0"></span>(<span class="blank" data-idx="1"></span>, [1, 2, 3]))`,answers:["map","str"]},
+  {type:"mcq",title:"filter()",xp:15,question:"Que fait <code>list(filter(None, [0, 1, '', 'ok', False]))</code> ?",options:["[0, 1, '', 'ok', False]","[1, 'ok']","['ok']","[None]"],correct:1,explanation:"filter(None, iterable) garde les éléments truthy. 0, '', False sont falsy, donc supprimés."},
+
+  /* Structures */
+  {type:"tf",title:"Tuple indexable",xp:10,question:"On peut accéder à un élément de tuple avec <code>t[0]</code>.",correct:"true",explanation:"Les tuples sont indexables comme les listes. Mais on ne peut pas modifier les éléments."},
+  {type:"fill",title:"Set — ajout",xp:15,question:"Ajoute l'élément 42 à un set <code>s</code> :",codeTemplate:`s = {<span class="blank" data-idx="0"></span>, 2, 3}\ns.<span class="blank" data-idx="1"></span>(42)`,answers:["1","add"]},
+  {type:"mcq",title:"Slicing avec step",xp:15,question:"Que donne <code>'abcdef'[::2]</code> ?",options:["'ace'","'bdf'","'abcd'","'fed'"],correct:0,explanation:"[::2] prend un élément sur 2 depuis le début : indices 0,2,4 → 'a','c','e' → 'ace'."},
+  {type:"mcq",title:"dict.get() vs []",xp:15,question:"Quelle différence entre <code>d['x']</code> et <code>d.get('x')</code> si 'x' n'existe pas ?",options:["Aucune","d['x'] retourne None, get lève KeyError","d['x'] lève KeyError, get retourne None","Les deux retournent None"],correct:2,explanation:"d['x'] lève KeyError si la clé est absente. d.get('x') retourne None (ou la valeur par défaut) sans erreur."},
+  {type:"fill",title:"Inverser une liste",xp:15,question:"Inverse la liste sans modifier l'originale :",codeTemplate:`lst = [1, 2, 3, 4]\ninversee = lst[<span class="blank" data-idx="0"></span><span class="blank" data-idx="1"></span><span class="blank" data-idx="2"></span>]`,answers:["::","-1",""]},
+  {type:"tf",title:"Dict update",xp:10,question:"<code>d.update({'a': 99})</code> ajoute ou écrase la clé 'a' dans le dict.",correct:"true",explanation:"update() fusionne le dict passé dans d. Si la clé existe déjà, la valeur est écrasée."},
+  {type:"mcq",title:"Unpacking",xp:15,question:"Que vaut <code>a</code> après <code>a, b, c = [10, 20, 30]</code> ?",options:["[10, 20, 30]","10","[10]","(10, 20, 30)"],correct:1,explanation:"L'unpacking assigne chaque élément à une variable. a vaut 10, b vaut 20, c vaut 30."},
+  {type:"fill",title:"Compter les occurrences",xp:15,question:"Compte combien de fois 'a' apparaît dans la liste :",codeTemplate:`lst = ['a', 'b', 'a', 'c', 'a']\nresultat = lst.<span class="blank" data-idx="0"></span>(<span class="blank" data-idx="1"></span>)`,answers:["count","'a'|\"a\""]},
+
+  /* Boucles */
+  {type:"mcq",title:"for…else",xp:20,question:"Le bloc <code>else</code> d'une boucle <code>for</code> s'exécute…",options:["Toujours après la boucle","Seulement si break n'a pas été appelé","Seulement si la liste est vide","En cas d'erreur"],correct:1,explanation:"Le else d'une boucle s'exécute si la boucle s'est terminée normalement (sans break)."},
+  {type:"tf",title:"range est une liste",xp:10,question:"<code>range(10)</code> crée une liste de 10 éléments en mémoire.",correct:"false",explanation:"range() crée un objet range (iterable lazy), pas une liste. Il ne génère les nombres qu'à la demande."},
+  {type:"fill",title:"Somme avec boucle",xp:15,question:"Calcule la somme de 1 à 10 inclus :",codeTemplate:`total = <span class="blank" data-idx="0"></span>(range(<span class="blank" data-idx="1"></span>, 11))`,answers:["sum","1"]},
+  {type:"mcq",title:"List comprehension imbriquée",xp:25,question:"Que produit <code>[i*j for i in range(3) for j in range(3) if i!=j]</code> ?",options:["[0,1,2,0,2,4]","[0,2,0,4,0,2]","[1,2,2,4,2,4]","[0,0,0,2,4,0]"],correct:1,explanation:"Pour i=0: j=1→0, j=2→0. Pour i=1: j=0→0, j=2→2. Pour i=2: j=0→0, j=1→2. Résultat: [0,0,0,2,0,2]."},
+  {type:"fill",title:"Boucle sur dict",xp:20,question:"Parcours les clés ET valeurs d'un dict :",codeTemplate:`d = {'a': 1, 'b': 2}\nfor k, v in d.<span class="blank" data-idx="0"></span>():\n    <span class="blank" data-idx="1"></span>(k, v)`,answers:["items","print"]},
+  {type:"tf",title:"enumerate commence à 0",xp:10,question:"Par défaut, <code>enumerate()</code> commence la numérotation à 0.",correct:"true",explanation:"Oui, mais on peut changer ça avec enumerate(lst, start=1) pour commencer à 1."},
+
+  /* Classes */
+  {type:"mcq",title:"__repr__ vs __str__",xp:20,question:"Quelle méthode est appelée par <code>repr(obj)</code> ?",options:["__str__","__repr__","__display__","__format__"],correct:1,explanation:"repr() appelle __repr__, print() appelle __str__. __repr__ doit retourner une représentation non ambiguë."},
+  {type:"fill",title:"Propriété @property",xp:25,question:"Déclare un getter avec le décorateur approprié :",codeTemplate:`class Cercle:\n    def __init__(self, r):\n        self._r = r\n    <span class="blank" data-idx="0"></span>\n    def rayon(self):\n        return self._r`,answers:["@property"]},
+  {type:"tf",title:"Héritage multiple",xp:15,question:"Python supporte l'héritage multiple (<code>class C(A, B)</code>).",correct:"true",explanation:"Python supporte l'héritage multiple. L'ordre de résolution MRO (Method Resolution Order) est déterminé par l'algorithme C3."},
+  {type:"mcq",title:"__len__",xp:15,question:"Quelle méthode doit-on implémenter pour que <code>len(obj)</code> fonctionne ?",options:["__size__","__length__","__len__","__count__"],correct:2,explanation:"Python appelle __len__ quand on utilise len() sur un objet. C'est une méthode dite 'dunder' (double underscore)."},
+  {type:"fill",title:"Class attribute",xp:20,question:"Définis un attribut de CLASSE partagé entre toutes les instances :",codeTemplate:`class Compteur:\n    <span class="blank" data-idx="0"></span> = 0\n    def __init__(self):\n        Compteur.total <span class="blank" data-idx="1"></span> 1`,answers:["total","+="]},
+  {type:"mcq",title:"Méthode de classe",xp:20,question:"Quel décorateur crée une méthode qui reçoit la CLASSE (pas l'instance) ?",options:["@staticmethod","@classmethod","@instancemethod","@method"],correct:1,explanation:"@classmethod reçoit cls (la classe) comme premier argument. @staticmethod ne reçoit ni self ni cls."},
+  {type:"tf",title:"__init__ retourne None",xp:10,question:"<code>__init__</code> doit obligatoirement retourner <code>None</code> (ou rien).",correct:"true",explanation:"Si __init__ retourne autre chose que None, Python lève TypeError. __new__ crée l'objet, __init__ l'initialise."},
+
+  /* Erreurs */
+  {type:"mcq",title:"Exception personnalisée",xp:20,question:"Comment créer une exception personnalisée <code>MonErreur</code> ?",options:["class MonErreur:","class MonErreur(Exception):","raise MonErreur","def MonErreur(Exception)"],correct:1,explanation:"Les exceptions personnalisées héritent d'Exception (ou d'une exception plus spécifique)."},
+  {type:"fill",title:"finally",xp:20,question:"Complète pour exécuter du code TOUJOURS, qu'il y ait une erreur ou non :",codeTemplate:`try:\n    risque()\nexcept ValueError:\n    gerer()\n<span class="blank" data-idx="0"></span>:\n    <span class="blank" data-idx="1"></span>()`,answers:["finally","nettoyer|cleanup|fermer|close|nettoyage|log"]},
+  {type:"tf",title:"except Exception",xp:10,question:"<code>except Exception</code> attrape TOUTES les exceptions, y compris KeyboardInterrupt.",correct:"false",explanation:"KeyboardInterrupt, SystemExit et GeneratorExit héritent de BaseException, pas Exception. except Exception ne les attrape pas."},
+  {type:"mcq",title:"raise vs raise from",xp:20,question:"Que fait <code>raise MonErreur() from e</code> ?",options:["Ignore l'erreur originale","Chaîne l'exception avec l'originale","Lève les deux en même temps","Syntax error"],correct:1,explanation:"raise X from Y chaîne les exceptions : Python affiche 'During handling of the above exception, another exception occurred:'."},
+  {type:"fill",title:"assert",xp:15,question:"Utilise assert pour vérifier qu'un nombre est positif :",codeTemplate:`def racine(n):\n    <span class="blank" data-idx="0"></span> n >= 0, <span class="blank" data-idx="1"></span>`,answers:["assert","\"n doit être positif\"|'n doit être positif'|\"Erreur\"|'Erreur'"]},
+
+  /* Modules & avancé */
+  {type:"mcq",title:"import as",xp:10,question:"Que fait <code>import numpy as np</code> ?",options:["Crée un alias np pour numpy","Renomme le module","Importe seulement np","Crée une copie de numpy"],correct:0,explanation:"import as crée un alias local. numpy reste importé sous le nom np pour raccourcir l'écriture."},
+  {type:"fill",title:"from import",xp:15,question:"Importe uniquement la fonction <code>randint</code> du module <code>random</code> :",codeTemplate:`<span class="blank" data-idx="0"></span> random <span class="blank" data-idx="1"></span> randint`,answers:["from","import"]},
+  {type:"tf",title:"__name__",xp:15,question:"<code>__name__ == '__main__'</code> est vrai quand le fichier est exécuté directement (pas importé).",correct:"true",explanation:"Quand un fichier est importé, __name__ vaut le nom du module. Quand il est exécuté directement, __name__ vaut '__main__'."},
+  {type:"mcq",title:"Générateur yield",xp:25,question:"Une fonction avec <code>yield</code> retourne…",options:["Une liste","Un générateur","Un tuple","None"],correct:1,explanation:"yield transforme une fonction en générateur. Chaque appel à next() reprend après le dernier yield."},
+  {type:"fill",title:"with statement",xp:20,question:"Complète pour ouvrir et lire un fichier proprement :",codeTemplate:`<span class="blank" data-idx="0"></span> open("f.txt") <span class="blank" data-idx="1"></span> f:\n    data = f.read()`,answers:["with","as"]},
+  {type:"mcq",title:"sorted() vs .sort()",xp:15,question:"Quelle différence entre <code>sorted(lst)</code> et <code>lst.sort()</code> ?",options:["Aucune","sorted() retourne une nouvelle liste, sort() modifie en place","sort() est plus rapide","sorted() ne fonctionne que sur les strings"],correct:1,explanation:"sorted() retourne une nouvelle liste sans modifier l'originale. list.sort() trie en place et retourne None."},
+  {type:"tf",title:"any() et all()",xp:10,question:"<code>all([])</code> retourne <code>True</code>.",correct:"true",explanation:"all() sur une séquence vide est True par convention (vacuously true). any([]) retourne False."},
+  {type:"fill",title:"max avec key",xp:20,question:"Trouve le mot le plus long dans une liste :",codeTemplate:`mots = ['chat', 'éléphant', 'rat']\nlong = <span class="blank" data-idx="0"></span>(mots, key=<span class="blank" data-idx="1"></span>)`,answers:["max","len"]},
+  {type:"mcq",title:"Walrus operator",xp:25,question:"<code>if n := len(lst): print(n)</code> — que se passe-t-il si lst est vide ?",options:["n vaut 0 et print s'exécute","n vaut 0 et print ne s'exécute pas","SyntaxError","NameError"],correct:1,explanation:"n := len(lst) assigne 0 à n. if 0: est falsy, donc le corps du if ne s'exécute pas."},
+  {type:"fill",title:"join une liste",xp:15,question:"Assemble <code>['Python', 'est', 'super']</code> en une string séparée par des espaces :",codeTemplate:`resultat = <span class="blank" data-idx="0"></span>.<span class="blank" data-idx="1"></span>(['Python', 'est', 'super'])`,answers:["' '|\" \"","join"]},
+  {type:"tf",title:"is vs ==",xp:15,question:"Pour comparer si deux variables ont la même valeur, il faut utiliser <code>is</code>.",correct:"false",explanation:"is compare l'identité mémoire (même objet). == compare les valeurs. Utilise toujours == pour comparer des valeurs, is seulement pour None."},
+  {type:"mcq",title:"Compréhension de set",xp:20,question:"Comment créer un set des carrés de 0 à 4 ?",options:["{x**2 for x in range(5)}","[x**2 for x in range(5)]","set(x**2 for x in range(5))","a et c"],correct:3,explanation:"Les deux syntaxes {x**2 for x in range(5)} et set(x**2 ...) créent un set. Les deux sont correctes."},
+  {type:"fill",title:"String multiplication",xp:10,question:"Crée la chaîne '---' (3 tirets) par multiplication :",codeTemplate:`ligne = <span class="blank" data-idx="0"></span> * <span class="blank" data-idx="1"></span>`,answers:["'-'|\"-\"","3"]},
+  {type:"mcq",title:"Copie profonde",xp:20,question:"Pour copier une liste imbriquée sans partager les sous-listes, on utilise…",options:["lst.copy()","list(lst)","copy.deepcopy(lst)","lst[:]"],correct:2,explanation:"Les 3 autres méthodes font une copie superficielle. Seul copy.deepcopy() copie récursivement tous les objets imbriqués."},
+  {type:"fill",title:"Ternaire",xp:15,question:"Retourne 'pair' ou 'impair' en une ligne :",codeTemplate:`n = 7\nresultat = 'pair' <span class="blank" data-idx="0"></span> n % 2 == 0 <span class="blank" data-idx="1"></span> 'impair'`,answers:["if","else"]},
+  {type:"tf",title:"Tuple comme clé dict",xp:15,question:"Un tuple peut être utilisé comme clé de dictionnaire.",correct:"true",explanation:"Les tuples sont immutables et hashables, donc utilisables comme clés. (1, 2) peut être une clé."},
+  {type:"mcq",title:"__getitem__",xp:20,question:"Quelle méthode est appelée quand on écrit <code>obj[0]</code> ?",options:["__index__","__access__","__getitem__","__item__"],correct:2,explanation:"__getitem__ est appelé lors d'un accès par index ou clé. Définir __getitem__ permet d'utiliser la syntaxe obj[key]."},
+  {type:"fill",title:"Docstring",xp:15,question:"Ajoute une docstring à cette fonction :",codeTemplate:`def calcul(x, y):\n    <span class="blank" data-idx="0"></span>Retourne la somme de x et y.<span class="blank" data-idx="1"></span>\n    return x + y`,answers:['"""','"""']},
+  {type:"mcq",title:"not in sur string",xp:10,question:"Que retourne <code>'z' not in 'python'</code> ?",options:["False","True","None","0"],correct:1,explanation:"'z' n'est pas dans 'python', donc 'z' not in 'python' est True."},
+  {type:"fill",title:"reversed()",xp:15,question:"Crée une liste inversée de [1,2,3] avec reversed() :",codeTemplate:`lst = [1, 2, 3]\ninversee = <span class="blank" data-idx="0"></span>(<span class="blank" data-idx="1"></span>(lst))`,answers:["list","reversed"]},
+  {type:"mcq",title:"set intersection",xp:15,question:"Que retourne <code>{1,2,3} & {2,3,4}</code> ?",options:["{1,2,3,4}","{2,3}","{1,4}","{1,2,3,2,3,4}"],correct:1,explanation:"& est l'intersection : éléments présents dans les DEUX sets. {2,3} sont dans les deux."},
+  {type:"tf",title:"print retourne None",xp:10,question:"<code>print('hello')</code> retourne <code>None</code>.",correct:"true",explanation:"print() est une procédure, elle affiche mais retourne None. Ne jamais faire x = print('hello') pour stocker le résultat."},
 ];
 
 /* Pool global = quiz de base + extra, mélangés */
