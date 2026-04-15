@@ -115,17 +115,6 @@ body.scrolled #persona-bg{opacity:.09}
 .auth-skip{display:block;text-align:center;margin-top:16px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:color .2s}
 .auth-skip:hover{color:var(--accent3)}
 
-/* ══════════════════════════════════
-   USER PROFILE BAR (top-left when logged in)
-══════════════════════════════════ */
-#user-bar{position:fixed;top:44px;right:16px;left:auto;z-index:300;display:flex;align-items:center;gap:10px;background:rgba(10,22,40,.85);border:1px solid var(--border2);border-radius:10px;padding:6px 12px;backdrop-filter:blur(8px);cursor:pointer;transition:all .2s;max-width:260px}
-#user-bar{display:none !important}
-@media(max-width:700px){#user-bar{right:10px;left:auto;max-width:min(240px,calc(100vw - 20px))}}
-#user-bar:hover{border-color:var(--accent2)}
-#user-bar.hidden{display:none}
-.ubar-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:white;flex-shrink:0}
-.ubar-info{display:flex;flex-direction:column;gap:1px;min-width:0}
-.ubar-name{font-family:'Space Mono',monospace;font-size:11px;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
 .admin-chip{
   display:inline-flex;align-items:center;gap:4px;
   margin-left:6px;padding:1px 7px;border-radius:999px;
@@ -137,11 +126,6 @@ body.scrolled #persona-bg{opacity:.09}
 }
 .admin-chip::before{content:'?';font-size:7px;color:#ff9fb0}
 .admin-chip.mini{padding:1px 6px;font-size:7px}
-.ubar-level{font-family:'Space Mono',monospace;font-size:9px;color:var(--gold);letter-spacing:1px}
-.ubar-xp-wrap{width:70px;flex-shrink:0}
-.ubar-xp-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
-.ubar-xp-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .5s ease}
-.ubar-xp-text{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);margin-top:2px}
 
 /* Profile dropdown */
 #profile-panel{position:fixed;top:88px;right:16px;left:auto;z-index:299;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:20px;width:280px;box-shadow:0 12px 40px rgba(0,0,0,.5);backdrop-filter:blur(12px);display:none}
@@ -459,8 +443,6 @@ footer a:hover{color:var(--accent)}
   #discord-btn .disc-info{display:none}
   #discord-btn{padding:9px}
   .auth-box{padding:24px 20px}
-  .ubar-xp-wrap{display:none}
-  .ubar-name{max-width:80px}
   .pp-stat-row{gap:6px}
   #profile-panel{left:auto;right:10px;width:min(280px,calc(100vw - 20px))}
   .cards-grid{grid-template-columns:1fr}
@@ -474,12 +456,6 @@ footer a:hover{color:var(--accent)}
   .search-wrap{
     top:0;
     padding-right:16px;
-  }
-  #user-bar{
-    top:10px;
-    right:10px;
-    left:auto;
-    max-width:min(230px,calc(100vw - 20px));
   }
   #profile-panel{
     top:56px;
@@ -833,19 +809,6 @@ footer a:hover{color:var(--accent)}
       <div class="auth-error" id="auth-error"></div>
     </div>
     <span class="auth-skip" onclick="skipAuth()">Continuer sans compte →</span>
-  </div>
-</div>
-
-<!-- USER BAR (logged in) -->
-<div id="user-bar" class="hidden" onclick="showPage('profile')">
-  <div class="ubar-avatar" id="ubar-avatar">A</div>
-  <div class="ubar-info">
-    <div class="ubar-name" id="ubar-name">Utilisateur</div>
-    <div class="ubar-level" id="ubar-level">Débutant</div>
-  </div>
-  <div class="ubar-xp-wrap">
-    <div class="ubar-xp-bar"><div class="ubar-xp-fill" id="ubar-xp-fill" style="width:0%"></div></div>
-    <div class="ubar-xp-text" id="ubar-xp-text">0 XP</div>
   </div>
 </div>
 
@@ -1265,7 +1228,6 @@ async function loadProfile(user){
     await sb.auth.signOut();
     currentUser=null;
     userProfile=null;
-    document.getElementById('user-bar').classList.add('hidden');
     document.getElementById('auth-overlay').classList.remove('hidden');
     showToast('? Compte banni');
     return;
@@ -1285,18 +1247,7 @@ async function loadRank(){
 }
 
 function updateUserBar(){
-  if(!userProfile)return;
-  const lv=getLevel(userProfile.xp);
-  const pct=getLevelPct(userProfile.xp);
-  const uname=(userProfile.username||'Utilisateur');
-  document.getElementById('user-bar').classList.remove('hidden');
-  const ubarNameEl=document.getElementById('ubar-name');
-  ubarNameEl.textContent=uname;
-  if(isAdmin())ubarNameEl.innerHTML+=` <span class="admin-chip mini">ADMIN</span>`;
-  document.getElementById('ubar-level').textContent=lv.name.toUpperCase();
-  document.getElementById('ubar-avatar').textContent=(userProfile.username||'?')[0].toUpperCase();
-  document.getElementById('ubar-xp-fill').style.width=pct+'%';
-  document.getElementById('ubar-xp-text').textContent=userProfile.xp+' XP';
+  return;
 }
 
 function renderProfilePage(){
@@ -1469,7 +1420,6 @@ function skipAuth(){hideAuthOverlay();showToast('// Mode visiteur — connecte-t
 async function logout(){
   await sb.auth.signOut();
   currentUser=null;userProfile=null;
-  document.getElementById('user-bar').classList.add('hidden');
   document.getElementById('auth-overlay').classList.remove('hidden');
   showPage('home');
 }
