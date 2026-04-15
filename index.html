@@ -2124,6 +2124,439 @@ async function loadAdminAvis(){
   </div>`).join('');
 }
 
+/* ══════════════════════════════════════════════
+   QUIZ — FONCTIONS MANQUANTES (BUG FIX)
+══════════════════════════════════════════════ */
+
+/* Donne de l'XP au joueur connecté */
+async function awardXP(amount){
+  if(!currentUser||!userProfile)return;
+  const newXP=(userProfile.xp||0)+amount;
+  const newDone=(userProfile.exercises_done||0)+1;
+  await sb.from('profiles').update({xp:newXP,exercises_done:newDone}).eq('id',currentUser.id);
+  userProfile.xp=newXP;
+  userProfile.exercises_done=newDone;
+  updateUserBar();
+  checkBadges();
+  showToast(`+${amount} XP !`,'xp');
+}
+
+/* Vérifie et attribue les badges débloqués */
+async function checkBadges(){
+  if(!currentUser||!userProfile)return;
+  const earned=JSON.parse(localStorage.getItem('badges_'+currentUser.id)||'[]');
+  for(const b of BADGES){
+    if(!earned.includes(b.id)&&b.cond(userProfile)){
+      earned.push(b.id);
+      showToast('🏅 Badge débloqué : '+b.name,'xp');
+    }
+  }
+  localStorage.setItem('badges_'+currentUser.id,JSON.stringify(earned));
+}
+
+/* Désactive tous les boutons d'une carte quiz */
+function lockCard(card){
+  card.querySelectorAll('button.mcq-opt,button.tf-btn,button.quiz-submit-btn').forEach(b=>b.disabled=true);
+}
+
+/* Affiche le feedback */
+function showFeedback(card,correct,explanation){
+  const fb=card.querySelector('.quiz-feedback');
+  if(fb){
+    fb.innerHTML=`<div style="margin-top:10px;padding:10px 14px;border-radius:6px;font-size:13px;border:1px solid ${correct?'var(--green)':'var(--red)'};background:${correct?'rgba(0,229,150,.07)':'rgba(255,60,90,.07)'};color:${correct?'var(--green)':'var(--red)'}">
+      ${correct?'✅ Correct !':'❌ Incorrect.'} <span style="color:var(--text)">${explanation}</span>
+    </div>`;
+  }
+  const st=card.querySelector('.quiz-status');
+  if(st)st.textContent=correct?'✅':'❌';
+}
+
+/* QCM */
+function handleMCQ(card,btn,isCorrect,xp,explanation){
+  if(card.dataset.answered)return;
+  card.dataset.answered='1';
+  lockCard(card);
+  btn.style.background=isCorrect?'rgba(0,229,150,.18)':'rgba(255,60,90,.18)';
+  btn.style.borderColor=isCorrect?'var(--green)':'var(--red)';
+  // Révèle la bonne réponse si mauvaise
+  if(!isCorrect){
+    card.querySelectorAll('.mcq-opt').forEach(b=>{
+      if(b.dataset.correct==='1'){b.style.background='rgba(0,229,150,.18)';b.style.borderColor='var(--green)';}
+    });
+  }
+  showFeedback(card,isCorrect,explanation);
+  if(isCorrect)awardXP(xp);
+}
+
+/* Vrai/Faux */
+function handleTF(card,val,correct,xp,explanation){
+  if(card.dataset.answered)return;
+  card.dataset.answered='1';
+  lockCard(card);
+  const isCorrect=val===correct;
+  card.querySelectorAll('.tf-btn').forEach(b=>{
+    if(b.dataset.val===correct){b.style.background='rgba(0,229,150,.18)';b.style.borderColor='var(--green)';}
+    else if(b.dataset.val===val&&!isCorrect){b.style.background='rgba(255,60,90,.18)';b.style.borderColor='var(--red)';}
+  });
+  showFeedback(card,isCorrect,explanation);
+  if(isCorrect)awardXP(xp);
+}
+
+/* À compléter */
+function handleFill(card,answers,xp){
+  if(card.dataset.answered)return;
+  const inputs=card.querySelectorAll('input.blank');
+  let allCorrect=true;
+  inputs.forEach((inp,i)=>{
+    const acceptedRaw=answers[i]||'';
+    const accepted=acceptedRaw.split('|').map(a=>a.trim().toLowerCase());
+    const val=inp.value.trim().toLowerCase();
+    const ok=accepted.includes(val);
+    inp.style.borderColor=ok?'var(--green)':'var(--red)';
+    inp.style.background=ok?'rgba(0,229,150,.1)':'rgba(255,60,90,.1)';
+    if(!ok){allCorrect=false;inp.title='Attendu : '+acceptedRaw;}
+  });
+  card.dataset.answered='1';
+  lockCard(card);
+  const explanation=allCorrect?'Toutes les réponses sont correctes !':'Certaines réponses sont incorrectes — les bonnes valeurs sont affichées en survol.';
+  showFeedback(card,allCorrect,explanation);
+  if(allCorrect)awardXP(xp);
+}
+
+/* Reset une carte quiz */
+function resetQuiz(card){
+  delete card.dataset.answered;
+  card.querySelectorAll('input.blank').forEach(inp=>{inp.value='';inp.style.borderColor='';inp.style.background='';inp.disabled=false;});
+  card.querySelectorAll('button').forEach(b=>{b.disabled=false;b.style.background='';b.style.borderColor='';});
+  const fb=card.querySelector('.quiz-feedback');if(fb)fb.innerHTML='';
+  const st=card.querySelector('.quiz-status');if(st)st.textContent='';
+}
+
+/* ══════════════════════════════════════════════
+   QUIZ ROTATIFS — évite la répétition XP
+══════════════════════════════════════════════ */
+const QUIZ_EXTRA = [
+  {type:"mcq",title:"isinstance()",xp:15,question:"Que fait <code>isinstance(42, int)</code> ?",options:["Lève une erreur","Retourne True","Retourne 42","Retourne False"],correct:1,explanation:"isinstance() vérifie si un objet est d'un type donné. 42 est bien un int."},
+  {type:"tf",title:"Pass et continue",xp:10,question:"<code>pass</code> et <code>continue</code> ont le même effet dans une boucle.",correct:"false",explanation:"pass ne fait rien du tout (placeholder), continue passe à l'itération suivante."},
+  {type:"fill",title:"Lambda",xp:20,question:"Crée une fonction lambda qui double un nombre :",codeTemplate:`double = <span class="blank" data-idx="0"></span> x: x <span class="blank" data-idx="1"></span> 2`,answers:["lambda","*"]},
+  {type:"mcq",title:"zip()",xp:15,question:"Que produit <code>list(zip([1,2],[3,4]))</code> ?",options:["[1,2,3,4]","[(1,3),(2,4)]","[[1,3],[2,4]]","(1,2,3,4)"],correct:1,explanation:"zip() apparie les éléments par index. Résultat : liste de tuples."},
+  {type:"tf",title:"None est falsy",xp:10,question:"<code>None</code> est évalué comme <code>False</code> dans un contexte booléen.",correct:"true",explanation:"None est falsy. bool(None) == False. Les autres valeurs falsy : 0, '', [], {}, set()."},
+  {type:"fill",title:"Dict comprehension",xp:25,question:"Complète pour créer {0:0, 1:1, 2:4, 3:9} :",codeTemplate:`carres = {x: <span class="blank" data-idx="0"></span> <span class="blank" data-idx="1"></span> x in range(4)}`,answers:["x**2","for"]},
+  {type:"mcq",title:"*args",xp:15,question:"Que représente <code>*args</code> dans une fonction ?",options:["Un argument obligatoire","Un tuple d'arguments positionnels","Un dict d'arguments","Une liste de kwargs"],correct:1,explanation:"*args capture tous les arguments positionnels supplémentaires dans un tuple."},
+  {type:"tf",title:"Strings immutables",xp:10,question:"On peut modifier un caractère d'une string avec <code>s[0] = 'X'</code>.",correct:"false",explanation:"Les strings sont immutables en Python. Il faut recréer une nouvelle string."},
+  {type:"fill",title:"global keyword",xp:20,question:"Complète pour modifier la variable globale depuis une fonction :",codeTemplate:`compteur = 0
+def incrementer():
+    <span class="blank" data-idx="0"></span> compteur
+    compteur <span class="blank" data-idx="1"></span> 1`,answers:["global","+="]},
+  {type:"mcq",title:"Décorateurs",xp:20,question:"Quelle syntaxe applique un décorateur <code>log</code> à une fonction <code>f</code> ?",options:["f = log(f)","@log avant def f","log(f)","f.decorator(log)"],correct:1,explanation:"@log est du sucre syntaxique pour f = log(f). Les deux sont équivalents."},
+  {type:"tf",title:"list() vs []",xp:10,question:"<code>list()</code> et <code>[]</code> créent tous les deux une liste vide.",correct:"true",explanation:"Oui, les deux sont équivalents. [] est plus rapide car pas d'appel de fonction."},
+  {type:"fill",title:"open() écriture",xp:20,question:"Complète pour ouvrir un fichier en mode écriture :",codeTemplate:`with <span class="blank" data-idx="0"></span>("notes.txt", <span class="blank" data-idx="1"></span>) as f:
+    f.write("ok")`,answers:["open",'"w"']},
+];
+
+/* Pool global = quiz de base + extra, mélangés */
+let _quizPool = null;
+let _quizDoneIds = new Set();
+
+function getQuizPool(){
+  if(!_quizPool){
+    const base = DATA.find(d=>d.id==='quiz')?.items||[];
+    _quizPool = [...base,...QUIZ_EXTRA].map((q,i)=>({...q,_uid:`q${i}`}));
+  }
+  return _quizPool;
+}
+
+/* Retourne N questions non encore répondues dans cette session */
+function pickQuizQuestions(n=8){
+  const pool=getQuizPool();
+  const fresh=pool.filter(q=>!_quizDoneIds.has(q._uid));
+  // Si plus assez de fresh, on reset
+  if(fresh.length<n){_quizDoneIds=new Set();return shuffle([...pool]).slice(0,n);}
+  return shuffle(fresh).slice(0,n);
+}
+
+function shuffle(arr){return arr.sort(()=>Math.random()-.5);}
+
+/* Rend la section quiz avec rotation */
+function buildRotatingQuiz(){
+  const questions=pickQuizQuestions(8);
+  questions.forEach(q=>_quizDoneIds.add(q._uid));
+  const cards=questions.map((it,i)=>buildQuizCard(it,i)).join('');
+  return `<div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px">SESSION ROTATIF · ${questions.length} questions · pas de répétition XP</div>
+    <button onclick="refreshQuizSection()" style="background:rgba(30,144,255,.1);border:1px solid var(--border2);border-radius:5px;padding:5px 12px;color:var(--accent2);font-family:'Space Mono',monospace;font-size:9px;cursor:pointer;letter-spacing:1px">↺ NOUVELLES QUESTIONS</button>
+  </div>
+  <div class="quiz-grid" id="rotating-quiz-grid">${cards}</div>`;
+}
+
+function refreshQuizSection(){
+  const questions=pickQuizQuestions(8);
+  questions.forEach(q=>_quizDoneIds.add(q._uid));
+  const grid=document.getElementById('rotating-quiz-grid');
+  if(grid)grid.innerHTML=questions.map((it,i)=>buildQuizCard(it,i)).join('');
+}
+
+/* ══════════════════════════════════════════════
+   EXAMEN DE FIN DE CHAPITRE
+══════════════════════════════════════════════ */
+const EXAMS = {
+  classes: {
+    title:"🎓 Examen — Classes & POO",
+    xpReward:120,
+    questions:[
+      {type:"mcq",title:"__init__",xp:0,question:"Quel est le rôle de <code>__init__</code> ?",options:["Détruire l'objet","Initialiser l'objet","Hériter d'une classe","Retourner l'objet"],correct:1,explanation:"__init__ est le constructeur. Il initialise les attributs à la création de l'objet."},
+      {type:"tf",title:"self obligatoire",xp:0,question:"Toutes les méthodes d'instance doivent avoir <code>self</code> comme premier paramètre.",correct:"true",explanation:"self représente l'instance. Sans lui, Python ne peut pas lier la méthode à l'objet."},
+      {type:"fill",title:"Héritage",xp:0,question:"Complète la déclaration d'une classe <code>Chien</code> héritant d'<code>Animal</code> :",codeTemplate:`class <span class="blank" data-idx="0"></span>(<span class="blank" data-idx="1"></span>):
+    def __init__(self, nom):
+        super().__init__(nom)`,answers:["Chien","Animal"]},
+      {type:"mcq",title:"super()",xp:0,question:"<code>super().__init__()</code> appelle…",options:["La méthode enfant","Le constructeur parent","Un module externe","La méthode statique"],correct:1,explanation:"super() permet d'accéder à la classe parente. super().__init__() appelle son constructeur."},
+      {type:"tf",title:"Attributs de classe",xp:0,question:"Un attribut défini dans <code>__init__</code> est partagé entre toutes les instances.",correct:"false",explanation:"Les attributs dans __init__ (via self.x) sont propres à chaque instance. Les attributs partagés se définissent directement dans le corps de la classe."},
+      {type:"fill",title:"Méthode statique",xp:0,question:"Complète le décorateur pour une méthode statique :",codeTemplate:`class Outil:
+    <span class="blank" data-idx="0"></span>
+    def <span class="blank" data-idx="1"></span>():
+        return 42`,answers:["@staticmethod","ma_methode|calcul|compute|get_value|get|run"]},
+    ]
+  },
+  boucles: {
+    title:"🎓 Examen — Boucles & Conditions",
+    xpReward:80,
+    questions:[
+      {type:"mcq",title:"break vs continue",xp:0,question:"<code>break</code> dans une boucle…",options:["Passe à l'itération suivante","Sort complètement de la boucle","Remet le compteur à 0","Lève une exception"],correct:1,explanation:"break quitte la boucle. continue passe à l'itération suivante sans quitter."},
+      {type:"tf",title:"while True",xp:0,question:"<code>while True:</code> sans <code>break</code> est une boucle infinie.",correct:"true",explanation:"True ne devient jamais False, donc la boucle ne s'arrête que par un break ou une exception."},
+      {type:"fill",title:"range() à 3 args",xp:0,question:"Complète pour parcourir 10, 8, 6, 4, 2 :",codeTemplate:`for i in range(<span class="blank" data-idx="0"></span>, <span class="blank" data-idx="1"></span>, <span class="blank" data-idx="2"></span>):
+    print(i)`,answers:["10","1|0","-2"]},
+      {type:"mcq",title:"elif",xp:0,question:"Combien de blocs <code>elif</code> peut-on mettre dans un if ?",options:["1","2","Max 10","Autant qu'on veut"],correct:3,explanation:"Il n'y a pas de limite au nombre de elif en Python."},
+    ]
+  },
+  fonctions: {
+    title:"🎓 Examen — Fonctions",
+    xpReward:80,
+    questions:[
+      {type:"fill",title:"Valeur par défaut",xp:0,question:"Donne à <code>n</code> la valeur par défaut <code>1</code> :",codeTemplate:`def incrementer(x, n<span class="blank" data-idx="0"></span>1):
+    return x + n`,answers:["="]},
+      {type:"mcq",title:"return multiple",xp:0,question:"<code>def f(): return 1, 2</code> retourne…",options:["Une erreur","Un tuple (1,2)","La valeur 1","La valeur 2"],correct:1,explanation:"Python emballe automatiquement plusieurs valeurs de return dans un tuple."},
+      {type:"tf",title:"Fonctions = objets",xp:0,question:"En Python, une fonction peut être passée en argument à une autre fonction.",correct:"true",explanation:"Les fonctions sont des objets de première classe. On peut les passer, stocker, retourner."},
+      {type:"fill",title:"*args",xp:0,question:"Utilise *args pour accepter n'importe quel nombre d'arguments :",codeTemplate:`def somme(<span class="blank" data-idx="0"></span>args):
+    return sum(args)`,answers:["*"]},
+    ]
+  }
+};
+
+let examState={};
+
+function openExam(examId){
+  const exam=EXAMS[examId];
+  if(!exam)return;
+  if(!currentUser){showToast('Connecte-toi pour passer l\'examen !');return;}
+  const done=JSON.parse(localStorage.getItem('exam_done_'+currentUser.id)||'{}');
+  if(done[examId]){showToast('✅ Examen déjà réussi ! (+'+exam.xpReward+' XP déjà perçus)');return;}
+  examState={id:examId,exam,current:0,score:0,answers:[]};
+  renderExamModal();
+  document.getElementById('exam-overlay').classList.remove('hidden');
+}
+
+function renderExamModal(){
+  const {exam,current}=examState;
+  const q=exam.questions[current];
+  const total=exam.questions.length;
+  const pct=Math.round((current/total)*100);
+  let body='';
+  if(q.type==='mcq'){
+    body=`<div class="mcq-options">${q.options.map((o,j)=>`<button class="mcq-opt" onclick="examAnswer(${j})">${String.fromCharCode(65+j)}. ${o}</button>`).join('')}</div>`;
+  }else if(q.type==='tf'){
+    body=`<div class="tf-options"><button class="tf-btn true-btn" onclick="examAnswer('true')">VRAI</button><button class="tf-btn false-btn" onclick="examAnswer('false')">FAUX</button></div>`;
+  }else if(q.type==='fill'){
+    const tpl=q.codeTemplate.replace(/<span class="blank"([^>]*)><\/span>/g,'<input class="blank"$1 type="text" />');
+    body=`<div class="fill-area"><div class="fill-code">${tpl}</div></div><button onclick="examAnswerFill()" style="margin-top:10px;background:linear-gradient(135deg,var(--accent),#1570cc);border:none;border-radius:5px;padding:9px 18px;color:white;font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">VALIDER</button>`;
+  }
+  document.getElementById('exam-body').innerHTML=`
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:6px"><span>Question ${current+1}/${total}</span><span style="color:var(--gold)">${exam.xpReward} XP à la clé</span></div>
+      <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s"></div></div>
+    </div>
+    <div class="quiz-question" style="margin-bottom:16px">${q.question}</div>
+    ${body}
+    <div id="exam-feedback" style="margin-top:10px"></div>`;
+}
+
+function examAnswer(val){
+  const {exam,current}=examState;
+  const q=exam.questions[current];
+  const isCorrect=String(val)===String(q.correct);
+  if(isCorrect)examState.score++;
+  showExamFeedback(isCorrect,q.explanation);
+}
+
+function examAnswerFill(){
+  const {exam,current}=examState;
+  const q=exam.questions[current];
+  const inputs=document.querySelectorAll('#exam-body input.blank');
+  let allOk=true;
+  inputs.forEach((inp,i)=>{
+    const accepted=(q.answers[i]||'').split('|').map(a=>a.trim().toLowerCase());
+    const ok=accepted.includes(inp.value.trim().toLowerCase());
+    inp.style.borderColor=ok?'var(--green)':'var(--red)';
+    if(!ok)allOk=false;
+  });
+  if(allOk)examState.score++;
+  showExamFeedback(allOk,q.explanation);
+}
+
+function showExamFeedback(ok,explanation){
+  document.getElementById('exam-body').querySelectorAll('button').forEach(b=>b.disabled=true);
+  document.getElementById('exam-feedback').innerHTML=`<div style="padding:10px;border-radius:6px;font-size:12px;border:1px solid ${ok?'var(--green)':'var(--red)'};background:${ok?'rgba(0,229,150,.08)':'rgba(255,60,90,.08)'};color:${ok?'var(--green)':'var(--red)'}">
+    ${ok?'✅':'❌'} <span style="color:var(--text)">${explanation}</span>
+  </div>
+  <button onclick="examNext()" style="margin-top:12px;background:linear-gradient(135deg,var(--accent),#1570cc);border:none;border-radius:5px;padding:9px 20px;color:white;font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">SUIVANT →</button>`;
+}
+
+function examNext(){
+  examState.current++;
+  if(examState.current>=examState.exam.questions.length){
+    examFinish();
+  }else{
+    renderExamModal();
+  }
+}
+
+async function examFinish(){
+  const {exam,score,id}=examState;
+  const total=exam.questions.length;
+  const pass=score>=Math.ceil(total*.6);
+  let msg='';
+  if(pass){
+    // Marquer comme fait
+    const done=JSON.parse(localStorage.getItem('exam_done_'+currentUser.id)||'{}');
+    done[id]=true;
+    localStorage.setItem('exam_done_'+currentUser.id,JSON.stringify(done));
+    // XP unique
+    await awardXP(exam.xpReward);
+    msg=`<div style="font-size:32px;margin-bottom:8px">🎓</div>
+      <div style="font-family:'Orbitron',monospace;font-size:17px;color:var(--green);margin-bottom:6px">EXAMEN RÉUSSI !</div>
+      <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--gold);margin-bottom:12px">+${exam.xpReward} XP gagnés</div>
+      <div style="font-size:13px;color:var(--text)">Score : ${score}/${total}</div>`;
+  }else{
+    msg=`<div style="font-size:32px;margin-bottom:8px">😵</div>
+      <div style="font-family:'Orbitron',monospace;font-size:17px;color:var(--red);margin-bottom:6px">ÉCHOUÉ</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Score : ${score}/${total} — Il faut au moins ${Math.ceil(total*.6)}/${total}</div>
+      <div style="font-size:12px;color:var(--text)">Révise le chapitre et retente !</div>`;
+  }
+  document.getElementById('exam-body').innerHTML=`<div style="text-align:center;padding:20px">${msg}
+    <button onclick="closeExam()" style="margin-top:18px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 20px;color:var(--text);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">${pass?'FERMER':'RETENTER PLUS TARD'}</button>
+    ${!pass?`<button onclick="retryExam('${id}')" style="margin-top:10px;margin-left:8px;background:linear-gradient(135deg,var(--accent),#1570cc);border:none;border-radius:6px;padding:10px 20px;color:white;font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">↺ RETENTER</button>`:''}
+  </div>`;
+}
+
+function closeExam(){document.getElementById('exam-overlay').classList.add('hidden');}
+function retryExam(id){openExam(id);}
+
+/* ══════════════════════════════════════════════
+   DAILY CHALLENGE
+══════════════════════════════════════════════ */
+const DAILY_POOL=[
+  {type:"mcq",title:"Daily — Walrus Operator",xp:30,question:"Que fait l'opérateur <code>:=</code> (walrus) ?",options:["Rien de spécial","Assigne ET retourne la valeur","Compare deux valeurs","Accède à un attribut"],correct:1,explanation:"L'opérateur := permet d'assigner une valeur et de l'utiliser dans une expression en une fois."},
+  {type:"fill",title:"Daily — Enumerate",xp:30,question:"Complète pour avoir l'index ET la valeur :",codeTemplate:`for <span class="blank" data-idx="0"></span>, val in <span class="blank" data-idx="1"></span>(liste):
+    print(i, val)`,answers:["i","enumerate"]},
+  {type:"mcq",title:"Daily — __str__",xp:30,question:"Quelle méthode est appelée par <code>print(obj)</code> ?",options:["__repr__","__print__","__str__","__display__"],correct:2,explanation:"__str__ définit la représentation lisible d'un objet pour print()."},
+  {type:"tf",title:"Daily — Generators",xp:30,question:"Un <code>generator</code> calcule tous ses éléments d'un coup en mémoire.",correct:"false",explanation:"Les générateurs produisent les éléments à la demande (lazy evaluation), économisant la mémoire."},
+  {type:"fill",title:"Daily — defaultdict",xp:35,question:"Importe et utilise defaultdict :",codeTemplate:`from collections import <span class="blank" data-idx="0"></span>
+d = defaultdict(<span class="blank" data-idx="1"></span>)`,answers:["defaultdict","list|int|set"]},
+  {type:"mcq",title:"Daily — copy vs deepcopy",xp:30,question:"<code>copy.copy()</code> crée…",options:["Un alias","Une copie superficielle","Une copie profonde","Rien"],correct:1,explanation:"copy.copy() copie l'objet mais pas les objets imbriqués. copy.deepcopy() copie tout récursivement."},
+  {type:"fill",title:"Daily — f-string formaté",xp:30,question:"Affiche pi à 3 décimales via f-string :",codeTemplate:`pi = 3.14159
+print(f"{pi<span class="blank" data-idx="0"></span>3f}")`,answers:[":."]},
+];
+
+function getDailyChallenge(){
+  const today=new Date().toDateString();
+  const seed=today.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+  return DAILY_POOL[seed%DAILY_POOL.length];
+}
+
+function buildDailyCard(){
+  const q=getDailyChallenge();
+  const today=new Date().toDateString();
+  const doneKey='daily_'+(currentUser?.id||'guest')+'_'+today;
+  const done=localStorage.getItem(doneKey);
+  if(done){
+    return `<div class="quiz-card" style="border-color:rgba(255,215,0,.3)">
+      <div class="quiz-header"><span class="quiz-type-badge" style="background:rgba(255,215,0,.2);color:var(--gold)">DAILY</span><span class="quiz-title">${q.title}</span><span class="quiz-xp-tag" style="color:var(--gold)">+${q.xp} XP</span></div>
+      <div class="quiz-body" style="text-align:center;padding:20px 0">
+        <div style="font-size:28px;margin-bottom:8px">✅</div>
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--green)">Défi du jour complété !</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Reviens demain pour un nouveau défi</div>
+      </div>
+    </div>`;
+  }
+  // Patch xp pour le daily
+  const dailyQ={...q};
+  const card=buildQuizCard(dailyQ,0);
+  // On post-patche le handler pour marquer comme done
+  return card.replace('quiz-card"','quiz-card daily-card" data-daily-key="'+doneKey+'"');
+}
+
+/* Override awardXP pour marquer le daily */
+const _origAwardXP=awardXP;
+// Patch via event: après handleMCQ/TF/Fill, si carte daily, marquer
+document.addEventListener('click',function(e){
+  const card=e.target.closest('.daily-card');
+  if(card&&card.dataset.dailyKey&&!card.dataset.dailyDone){
+    // On attend un tick pour voir si la carte est answered
+    setTimeout(()=>{
+      if(card.dataset.answered){
+        card.dataset.dailyDone='1';
+        localStorage.setItem(card.dataset.dailyKey,'1');
+      }
+    },100);
+  }
+});
+
+/* ══════════════════════════════════════════════
+   PATCH renderAll — injecte daily + examens + rotatif
+   dans la section quiz après le render original
+══════════════════════════════════════════════ */
+const _origRenderAll = renderAll;
+renderAll = function(filter='all', query=''){
+  _origRenderAll(filter, query);
+  if(filter==='all'||filter==='quiz'){
+    const quizSec=document.querySelector('.s-quiz');
+    if(!quizSec)return;
+    // Vide l'ancien quiz-grid généré par buildQuizCard (les 23 questions fixes)
+    const oldGrid=quizSec.querySelector('.quiz-grid');
+    if(oldGrid)oldGrid.remove();
+    // Injecte le nouveau contenu
+    const extra=document.createElement('div');
+    extra.innerHTML=`<div style="margin-bottom:18px">
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+          <span style="width:6px;height:6px;background:var(--gold);border-radius:50%;display:inline-block"></span>DÉFI DU JOUR
+        </div>
+        <div class="quiz-grid">${buildDailyCard()}</div>
+      </div>
+      <div style="margin-bottom:18px">
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--accent2);letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+          <span style="width:6px;height:6px;background:var(--accent2);border-radius:50%;display:inline-block"></span>EXAMENS DE CHAPITRE · <span style="color:var(--gold)">XP unique, une seule fois</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          ${buildExamButton('classes','🟣 Classes & POO','120 XP')}
+          ${buildExamButton('boucles','🟡 Boucles & Conditions','80 XP')}
+          ${buildExamButton('fonctions','🟢 Fonctions','80 XP')}
+        </div>
+      </div>
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+        <span style="width:6px;height:6px;background:var(--muted);border-radius:50%;display:inline-block"></span>QUIZ ROTATIFS · nouvelles questions à chaque session
+      </div>
+      ${buildRotatingQuiz()}`;
+    quizSec.appendChild(extra);
+  }
+};
+
+function buildExamButton(id,label,xp){
+  return `<button onclick="openExam('${id}')" style="background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:12px 16px;color:var(--text);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;transition:all .2s;text-align:left;min-width:160px"
+    onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border2)'">
+    <div style="font-size:14px;margin-bottom:4px">${label}</div>
+    <div style="color:var(--gold);font-size:9px;letter-spacing:1px">${xp} · UNE SEULE FOIS</div>
+  </button>`;
+}
+
 /* ══ INIT ══ */
 showPage('home');
 (async()=>{
@@ -2133,6 +2566,17 @@ showPage('home');
 })();
 setTimeout(()=>showToast('// Persona 3 Theme — Python Dico · by Ace'),600);
 </script>
+
+<!-- EXAM OVERLAY -->
+<div id="exam-overlay" class="hidden" style="position:fixed;inset:0;z-index:680;display:flex;align-items:center;justify-content:center;background:rgba(2,5,16,.92);backdrop-filter:blur(14px);padding:20px">
+  <div style="background:var(--surface);border:1px solid var(--accent2);border-radius:14px;width:min(520px,95vw);max-height:85vh;overflow-y:auto;position:relative">
+    <div style="position:sticky;top:0;background:var(--surface);padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;z-index:2">
+      <div style="font-family:'Orbitron',monospace;font-size:13px;color:white" id="exam-title">EXAMEN</div>
+      <button onclick="closeExam()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div id="exam-body" style="padding:20px"></div>
+  </div>
+</div>
 
 <!-- MEMBRES OVERLAY -->
 <div id="membres-overlay" class="hidden" style="position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center;background:rgba(2,5,16,.85)">
