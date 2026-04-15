@@ -62,22 +62,29 @@ body.scrolled #persona-bg{opacity:.09}
 #theme-switcher{
   position:fixed;right:16px;bottom:20px;z-index:330;
   background:rgba(10,22,40,.88);border:1px solid var(--border2);
-  border-radius:10px;padding:8px 10px;backdrop-filter:blur(10px);
-  display:flex;align-items:center;gap:8px;
+  border-radius:12px;padding:10px 12px;backdrop-filter:blur(10px);
+  display:flex;align-items:center;gap:10px;
+  box-shadow:0 8px 26px rgba(0,0,0,.35);
 }
 #theme-switcher label{
-  font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);
-  letter-spacing:1px;text-transform:uppercase;white-space:nowrap;
+  font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);
+  letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap;
 }
 #theme-select{
   background:var(--surface2);border:1px solid var(--border);
-  border-radius:6px;padding:6px 8px;color:var(--text);
-  font-family:'Space Mono',monospace;font-size:10px;outline:none;
+  border-radius:8px;padding:10px 32px 10px 12px;color:var(--text);
+  font-family:'Space Mono',monospace;font-size:12px;outline:none;
+  min-height:42px;min-width:170px;cursor:pointer;
+  line-height:1.2;
 }
-#theme-select:focus{border-color:var(--accent2)}
+#theme-select:hover{border-color:var(--accent)}
+#theme-select:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(0,207,255,.2)}
 @media(max-width:700px){
   #theme-switcher{
-    left:12px;right:12px;bottom:12px;justify-content:space-between;
+    left:10px;right:10px;bottom:10px;justify-content:space-between;gap:12px;
+  }
+  #theme-select{
+    flex:1;min-width:0;min-height:44px;
   }
 }
 
@@ -707,10 +714,12 @@ footer a:hover{color:var(--accent)}
 
 /* Top nav tab for profile */
 .main-nav-tab{
-  position:fixed;top:8px;left:50%;transform:translateX(-50%);
+  position:fixed;top:10px;left:50%;
+  transform:translateX(calc(-50% + clamp(115px,10vw,220px)));
   z-index:200;display:flex;align-items:center;gap:0;
   background:rgba(10,22,40,.85);border:1px solid var(--border2);
   border-radius:8px;overflow:hidden;backdrop-filter:blur(8px);
+  max-width:calc(100vw - 340px);
 }
 .main-nav-btn{
   font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1.5px;
@@ -723,11 +732,28 @@ footer a:hover{color:var(--accent)}
 .main-nav-btn.active{background:var(--accent);color:white}
 @media(min-width:901px){
   .main-nav-tab{border-radius:6px}
-  .main-nav-btn{padding:6px 11px;font-size:8px;letter-spacing:1px}
+  .main-nav-btn{padding:7px 13px;font-size:8px;letter-spacing:1px}
+}
+
+@media(max-width:900px){
+  .main-nav-tab{
+    left:50%;
+    top:8px;
+    transform:translateX(-50%);
+    max-width:calc(100vw - 140px);
+  }
 }
 
 @media(max-width:600px){
-  .main-nav-tab{left:56px;transform:none;max-width:calc(100vw - 72px);overflow-x:auto}
+  .main-nav-tab{
+    left:50%;
+    top:8px;
+    transform:translateX(-50%);
+    width:min(340px,calc(100vw - 16px));
+    max-width:calc(100vw - 16px);
+    overflow-x:auto;
+  }
+  .main-nav-btn{flex:1 0 auto;padding:10px 14px;font-size:10px}
   .pp-avatar-zone{margin-top:-40px;padding:0 16px}
   .pp-avatar-img{width:72px;height:72px;font-size:22px}
   .pp-info{padding-top:46px}
@@ -1023,6 +1049,42 @@ const THEME_PRESETS={
       '--border':'#25313f','--border2':'#34465d','--accent':'#4aa8ff','--accent2':'#00d4ff',
       '--accent3':'#b6e8ff','--gold':'#f7cc4b','--teal':'#33e0d0','--red':'#ff526f',
       '--green':'#2be39e','--text':'#e6f4ff','--muted':'#7a96b4','--code-bg':'#0d1116'
+    }
+  },
+  cyberGreen:{
+    label:'Cyber vert',
+    vars:{
+      '--bg':'#02110d','--bg2':'#04221a','--surface':'#082b20','--surface2':'#0f3829',
+      '--border':'#1a4f3b','--border2':'#2a6a50','--accent':'#00e596','--accent2':'#00ffd0',
+      '--accent3':'#9dffe8','--gold':'#f7e07a','--teal':'#35f0db','--red':'#ff5b7a',
+      '--green':'#39ff9f','--text':'#d7fff2','--muted':'#66b39b','--code-bg':'#031712'
+    }
+  },
+  solar:{
+    label:'Solar',
+    vars:{
+      '--bg':'#1a0f05','--bg2':'#2a1808','--surface':'#341f0e','--surface2':'#442814',
+      '--border':'#68411f','--border2':'#8a5528','--accent':'#ff8c00','--accent2':'#ffb347',
+      '--accent3':'#ffd8a8','--gold':'#ffd966','--teal':'#4de2d4','--red':'#ff5b45',
+      '--green':'#6df1a5','--text':'#ffe9d1','--muted':'#c69f72','--code-bg':'#221207'
+    }
+  },
+  arctic:{
+    label:'Arctique',
+    vars:{
+      '--bg':'#07121d','--bg2':'#0c1e2d','--surface':'#11283a','--surface2':'#173247',
+      '--border':'#29506c','--border2':'#3c6f94','--accent':'#4dc7ff','--accent2':'#88e3ff',
+      '--accent3':'#cbefff','--gold':'#f4d97a','--teal':'#73f5ea','--red':'#ff6d8f',
+      '--green':'#63f3c0','--text':'#e4f6ff','--muted':'#83abc5','--code-bg':'#081824'
+    }
+  },
+  ember:{
+    label:'Ember',
+    vars:{
+      '--bg':'#12060a','--bg2':'#1f0b12','--surface':'#2a121b','--surface2':'#361824',
+      '--border':'#5a2436','--border2':'#7a3149','--accent':'#ff3c5a','--accent2':'#ff7a66',
+      '--accent3':'#ffc0b5','--gold':'#ffd27d','--teal':'#4de5d7','--red':'#ff5a7a',
+      '--green':'#77e6b1','--text':'#ffe2ea','--muted':'#c08899','--code-bg':'#1b0b12'
     }
   }
 };
@@ -2966,4 +3028,3 @@ setTimeout(()=>showToast('// Persona 3 Theme — Python Dico · by Ace'),600);
 
 </body>
 </html>
-
