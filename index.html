@@ -118,8 +118,8 @@ body.scrolled #persona-bg{opacity:.09}
 /* ══════════════════════════════════
    USER PROFILE BAR (top-left when logged in)
 ══════════════════════════════════ */
-#user-bar{position:fixed;top:52px;left:16px;right:auto;z-index:300;display:flex;align-items:center;gap:10px;background:rgba(10,22,40,.85);border:1px solid var(--border2);border-radius:10px;padding:6px 12px;backdrop-filter:blur(8px);cursor:pointer;transition:all .2s;max-width:260px}
-@media(max-width:700px){#user-bar{right:auto;left:16px;max-width:calc(100vw - 120px)}}
+#user-bar{position:fixed;top:44px;right:16px;left:auto;z-index:300;display:flex;align-items:center;gap:10px;background:rgba(10,22,40,.85);border:1px solid var(--border2);border-radius:10px;padding:6px 12px;backdrop-filter:blur(8px);cursor:pointer;transition:all .2s;max-width:260px}
+@media(max-width:700px){#user-bar{right:10px;left:auto;max-width:min(240px,calc(100vw - 20px))}}
 #user-bar:hover{border-color:var(--accent2)}
 #user-bar.hidden{display:none}
 .ubar-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:white;flex-shrink:0}
@@ -143,7 +143,7 @@ body.scrolled #persona-bg{opacity:.09}
 .ubar-xp-text{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);margin-top:2px}
 
 /* Profile dropdown */
-#profile-panel{position:fixed;top:96px;left:16px;right:auto;z-index:299;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:20px;width:280px;box-shadow:0 12px 40px rgba(0,0,0,.5);backdrop-filter:blur(12px);display:none}
+#profile-panel{position:fixed;top:88px;right:16px;left:auto;z-index:299;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:20px;width:280px;box-shadow:0 12px 40px rgba(0,0,0,.5);backdrop-filter:blur(12px);display:none}
 #profile-panel.open{display:block;animation:slideDown .2s ease}
 @keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 .pp-name{font-family:'Orbitron',monospace;font-size:16px;font-weight:700;color:white;margin-bottom:2px}
@@ -461,7 +461,7 @@ footer a:hover{color:var(--accent)}
   .ubar-xp-wrap{display:none}
   .ubar-name{max-width:80px}
   .pp-stat-row{gap:6px}
-  #profile-panel{left:16px;right:16px;width:auto}
+  #profile-panel{left:auto;right:10px;width:min(280px,calc(100vw - 20px))}
   .cards-grid{grid-template-columns:1fr}
   .lecons-grid,.quiz-grid,.avis-grid,.exos-grid{grid-template-columns:1fr}
   .projets-grid,.erreurs-grid,.app-grid{grid-template-columns:1fr}
@@ -469,29 +469,29 @@ footer a:hover{color:var(--accent)}
 
 @media(max-width:900px){
   #memento-clock{display:none}
-  header{padding-top:132px}
+  header{padding-top:92px}
   .search-wrap{
     top:0;
     padding-right:16px;
   }
   #user-bar{
     top:10px;
-    left:10px;
-    right:auto;
-    max-width:calc(100vw - 20px);
+    right:10px;
+    left:auto;
+    max-width:min(230px,calc(100vw - 20px));
   }
   #profile-panel{
-    top:112px;
-    left:10px;
+    top:56px;
     right:10px;
-    width:auto;
+    left:auto;
+    width:min(280px,calc(100vw - 20px));
   }
   .main-nav-tab{
-    top:64px;
+    top:10px;
     left:50%;
     transform:translateX(-50%);
-    width:min(360px,calc(100vw - 20px));
-    max-width:calc(100vw - 20px);
+    width:min(340px,calc(100vw - 110px));
+    max-width:calc(100vw - 110px);
   }
 }
 
@@ -766,20 +766,20 @@ footer a:hover{color:var(--accent)}
 @media(max-width:900px){
   .main-nav-tab{
     left:50%;
-    top:64px;
+    top:10px;
     transform:translateX(-50%);
-    width:min(360px,calc(100vw - 20px));
-    max-width:calc(100vw - 20px);
+    width:min(340px,calc(100vw - 110px));
+    max-width:calc(100vw - 110px);
   }
 }
 
 @media(max-width:600px){
   .main-nav-tab{
     left:50%;
-    top:64px;
+    top:10px;
     transform:translateX(-50%);
-    width:min(340px,calc(100vw - 16px));
-    max-width:calc(100vw - 16px);
+    width:min(320px,calc(100vw - 110px));
+    max-width:calc(100vw - 110px);
     overflow-x:auto;
   }
   .main-nav-btn{flex:1 0 auto;padding:10px 14px;font-size:10px}
